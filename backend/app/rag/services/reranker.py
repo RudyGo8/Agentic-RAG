@@ -5,6 +5,9 @@
 '''
 import os
 import requests
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 def rerank_documents(query: str, docs: list[dict], max_docs: int = 10):
@@ -56,3 +59,6 @@ def rerank_documents(query: str, docs: list[dict], max_docs: int = 10):
         except Exception as e:
             meta["rerank_error"] = str(e)
     return results, meta
+
+
+

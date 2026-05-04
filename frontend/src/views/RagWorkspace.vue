@@ -26,11 +26,11 @@
         v-else-if="activeNav === 'settings'"
         :documents="documents"
         :loading="documentsLoading"
-        :selected-file="selectedFile"
+        :selected-files="selectedFiles"
         :uploading="isUploading"
         :upload-progress="uploadProgress"
-        @select-file="handleFileSelect"
-        @upload="uploadDocument"
+        @select-files="handleFileSelect"
+        @upload-files="uploadDocument"
         @refresh="loadDocuments"
         @delete-document="deleteDocument"
       />
@@ -83,7 +83,7 @@ import { configureMarkdown } from '../services/markdown';
 import { fetchCurrentUser, login as loginUser, register as registerUser } from '../services/authService';
 import { openChatStream } from '../services/chatService';
 import { consumeChatStream } from '../services/chatStream';
-import { listDocuments, removeDocument, uploadDocumentFile } from '../services/documentService';
+import { listDocuments, removeDocument, uploadDocumentFiles } from '../services/documentService';
 import { getSessionMessages, listSessions, removeSession } from '../services/sessionService';
 import AppSidebar from '../components/layout/AppSidebar.vue';
 import AuthPanel from '../components/auth/AuthPanel.vue';
@@ -191,6 +191,8 @@ export default {
       this.messages = [];
       this.sessions = [];
       this.documents = [];
+      this.selectedFiles = [];
+      this.uploadProgress = '';
       this.activeNav = 'newChat';
       this.showHistorySidebar = false;
       localStorage.removeItem(config.TOKEN_STORAGE_KEY);
@@ -204,8 +206,6 @@ export default {
       const icon = step.icon || '';
       const label = step.label || '';
       const detail = step.detail || '';
-
-      if (label.includes('查询外部来源')) return;
 
       const signature = `${icon}|${label}|${detail}`;
       const last = message.ragSteps.at(-1);
@@ -233,7 +233,8 @@ export default {
         isUser: false,
         isThinking: true,
         ragTrace: null,
-        ragSteps: []
+        ragSteps: [],
+        showTrace: false
       });
 
       const botMsg = this.messages[this.messages.length - 1];
@@ -321,7 +322,8 @@ export default {
           text: msg.content,
           isUser: msg.type === 'human',
           ragTrace: msg.rag_trace || null,
-          ragSteps: []
+          ragSteps: [],
+          showTrace: false
         }));
       } catch (error) {
         alert(`加载会话失败：${this.handleServiceError(error)}`);
@@ -363,12 +365,12 @@ export default {
         this.documentsLoading = false;
       }
     },
-    handleFileSelect(file) {
-      this.selectedFile = file;
+    handleFileSelect(files) {
+      this.selectedFiles = Array.isArray(files) ? files : [];
       this.uploadProgress = '';
     },
     async uploadDocument() {
-      if (!this.selectedFile) {
+      if (!this.selectedFiles.length) {
         alert('请先选择文件');
         return;
       }
@@ -376,9 +378,19 @@ export default {
       this.isUploading = true;
       this.uploadProgress = '正在上传...';
       try {
-        const data = await uploadDocumentFile(this.api, this.token, this.selectedFile);
-        this.uploadProgress = data.message;
-        this.selectedFile = null;
+        const data = await uploadDocumentFiles(this.api, this.token, this.selectedFiles);
+        const failedItems = Array.isArray(data.results)
+          ? data.results.filter((item) => item && item.success === false)
+          : [];
+        if (failedItems.length) {
+          const details = failedItems
+            .map((item) => `${item.filename}: ${item.message || '上传失败'}`)
+            .join('；');
+          this.uploadProgress = `${data.message}。失败详情：${details}`;
+        } else {
+          this.uploadProgress = data.message;
+        }
+        this.selectedFiles = [];
         await this.loadDocuments();
         setTimeout(() => {
           this.uploadProgress = '';

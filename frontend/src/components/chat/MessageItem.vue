@@ -10,45 +10,63 @@
         <span v-if="!message.ragSteps || !message.ragSteps.length" class="thinking-text">正在思考中...</span>
         <span v-else class="thinking-text">{{ message.ragSteps[message.ragSteps.length - 1].label }}</span>
       </div>
-
-      <div v-if="message.ragSteps && message.ragSteps.length" class="thinking-trace-lines">
-        <div v-for="(step, index) in message.ragSteps" :key="index" class="thinking-trace-line">
-          <span class="thinking-trace-icon">{{ step.icon || '•' }}</span>
-          <span class="thinking-trace-label">{{ step.label }}</span>
-          <span v-if="step.detail" class="thinking-trace-detail">{{ step.detail }}</span>
-        </div>
-      </div>
     </div>
 
-    <div v-if="showStepTags" class="rag-steps-display">
-      <span v-for="(step, index) in message.ragSteps" :key="index" class="rag-step-tag">
-        {{ step.icon || '•' }} {{ step.label }}
-      </span>
+    <div v-if="showTraceLines" class="thinking-trace-lines">
+      <div v-for="(step, index) in message.ragSteps" :key="index" class="thinking-trace-line">
+        <span class="thinking-trace-icon">{{ step.icon || '•' }}</span>
+        <span class="thinking-trace-label">{{ step.label }}</span>
+        <span v-if="step.detail" class="thinking-trace-detail">{{ step.detail }}</span>
+      </div>
     </div>
 
     <div class="message-content" v-html="renderedContent"></div>
 
     <div v-if="!message.isUser && message.ragTrace" class="message-meta">
-      <details class="reasoning-details">
-        <summary>检索过程</summary>
-        <div class="reasoning-content">
-          <div class="trace-line">
-            RAG 工具：{{ message.ragTrace.tool_used ? message.ragTrace.tool_name : '未使用' }}
+      <button class="trace-btn" @click="toggleTrace">
+        检索过程
+      </button>
+
+      <div v-if="message.showTrace" class="trace-panel">
+        <div class="trace-meta">
+          <div>检索模式：{{ message.ragTrace.retrieval_mode || '-' }}</div>
+          <div>候选召回数：{{ message.ragTrace.candidate_k || '-' }}</div>
+          <div>叶子召回层级：{{ message.ragTrace.leaf_retrieve_level || '-' }}</div>
+          <div>Auto-merging启用：{{ message.ragTrace.auto_merge_enabled ? '是' : '否' }}</div>
+          <div>Auto-merging应用：{{ message.ragTrace.auto_merge_applied ? '是' : '否' }}</div>
+          <div>合并阈值：{{ message.ragTrace.auto_merge_threshold || '-' }}</div>
+          <div>合并替换片段：{{ message.ragTrace.auto_merge_replaced_chunks || 0 }}</div>
+          <div>合并轮次：{{ message.ragTrace.auto_merge_steps || 0 }}</div>
+          <div>Rerank已配置：{{ message.ragTrace.rerank_enabled ? '是' : '否' }}</div>
+          <div>Rerank已执行：{{ message.ragTrace.rerank_applied ? '是' : '否' }}</div>
+          <div>Rerank模型：{{ message.ragTrace.rerank_model || '-' }}</div>
+          <div>扩展查询：{{ message.ragTrace.query || '-' }}</div>
+        </div>
+
+        <h3 class="trace-title">初次检索结果</h3>
+
+        <div
+          v-for="(chunk, index) in chunksToRender"
+          :key="chunk.chunk_id || chunk.id || `${index}-${chunk.filename || chunk.file_name || ''}`"
+          class="trace-chunk"
+        >
+          <div class="chunk-title">
+            {{ chunk.filename || chunk.file_name || '未知文件' }}
+            <span v-if="(chunk.page_number || chunk.page)">（第 {{ chunk.page_number || chunk.page }} 页）</span>
           </div>
-          <div v-if="message.ragTrace.retrieval_stage" class="trace-line">
-            检索阶段：{{ message.ragTrace.retrieval_stage }}
+
+          <div class="chunk-score">
+            RRF名次：#{{ chunk.rrf_rank || chunk.rank || chunk.final_rank || (index + 1) }}
+            <span v-if="chunk.rerank_score !== undefined && chunk.rerank_score !== null">
+              ｜Rerank分数：{{ Number(chunk.rerank_score).toFixed(4) }}
+            </span>
           </div>
-          <div v-if="message.ragTrace.grade_score" class="trace-line">
-            相关性评分：{{ message.ragTrace.grade_score }}
-          </div>
-          <div v-if="message.ragTrace.skill?.display_name" class="trace-line">
-            Skill：{{ message.ragTrace.skill.display_name }}
-          </div>
-          <div v-if="Array.isArray(message.ragTrace.mcp_calls)" class="trace-line">
-            MCP 调用：{{ formatMcpCallSummary(message.ragTrace) }}
+
+          <div class="chunk-text">
+            {{ chunk.text || '-' }}
           </div>
         </div>
-      </details>
+      </div>
     </div>
   </div>
 </template>
@@ -67,38 +85,25 @@ export default {
     showThinking() {
       return !this.message.isUser && this.message.isThinking && !this.message.text;
     },
-    showStepTags() {
+    showTraceLines() {
       return !this.message.isUser
-        && this.message.ragSteps
-        && this.message.ragSteps.length
-        && (!this.message.isThinking || this.message.text);
+        && Array.isArray(this.message.ragSteps)
+        && this.message.ragSteps.length > 0;
     },
     renderedContent() {
       return this.message.isUser ? escapeHtml(this.message.text) : renderMarkdown(this.message.text);
+    },
+    chunksToRender() {
+      const trace = this.message.ragTrace || {};
+      if (Array.isArray(trace.retrieved_chunks) && trace.retrieved_chunks.length) return trace.retrieved_chunks;
+      if (Array.isArray(trace.initial_retrieved_chunks) && trace.initial_retrieved_chunks.length) return trace.initial_retrieved_chunks;
+      if (Array.isArray(trace.expanded_retrieved_chunks) && trace.expanded_retrieved_chunks.length) return trace.expanded_retrieved_chunks;
+      return [];
     }
   },
   methods: {
-    formatMcpCallSummary(ragTrace) {
-      const calls = Array.isArray(ragTrace?.mcp_calls) ? ragTrace.mcp_calls : [];
-      const successCalls = calls.filter((item) => item && item.success === true);
-      if (successCalls.length === 0) return '未调用';
-
-      const sourceCount = new Map();
-      for (const item of successCalls) {
-        const source = (item.server_name || '').trim();
-        if (!source) continue;
-        sourceCount.set(source, (sourceCount.get(source) || 0) + 1);
-      }
-
-      if (sourceCount.size === 0) {
-        return `${successCalls.length} 次`;
-      }
-
-      const sourceText = Array.from(sourceCount.entries())
-        .map(([source, count]) => `${source}${count > 1 ? `x${count}` : ''}`)
-        .join('、');
-
-      return `${sourceText}（${successCalls.length} 次）`;
+    toggleTrace() {
+      this.message.showTrace = !this.message.showTrace;
     }
   }
 };

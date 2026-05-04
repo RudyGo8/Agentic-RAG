@@ -20,7 +20,6 @@ _default_model = None
 
 
 def _get_grader_model():
-    """获取相关性评估模型"""
     global _grader_model
     if not API_KEY or not GRADE_MODEL:
         return None

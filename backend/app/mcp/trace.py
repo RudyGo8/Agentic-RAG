@@ -1,25 +1,29 @@
-from contextvars import ContextVar
 from datetime import datetime, timezone
+import threading
 from typing import Any
 
-_MCP_CALLS: ContextVar[list[dict[str, Any]]] = ContextVar("_MCP_CALLS", default=[])
+_TRACE_LOCK = threading.RLock()
+_MCP_CALLS: list[dict[str, Any]] = []
 
 
 def reset_mcp_trace() -> None:
-    _MCP_CALLS.set([])
+    global _MCP_CALLS
+    with _TRACE_LOCK:
+        _MCP_CALLS = []
 
 
 def append_mcp_trace(call: dict[str, Any]) -> None:
-    items = list(_MCP_CALLS.get())
-    items.append(call)
-    _MCP_CALLS.set(items)
+    with _TRACE_LOCK:
+        _MCP_CALLS.append(call)
 
 
 def get_mcp_trace(clear: bool = True) -> list[dict[str, Any]]:
-    items = list(_MCP_CALLS.get())
-    if clear:
-        _MCP_CALLS.set([])
-    return items
+    global _MCP_CALLS
+    with _TRACE_LOCK:
+        items = list(_MCP_CALLS)
+        if clear:
+            _MCP_CALLS = []
+        return items
 
 
 def new_mcp_call(
@@ -43,4 +47,3 @@ def new_mcp_call(
         "result_summary": result_summary,
         "error": error,
     }
-

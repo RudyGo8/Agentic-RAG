@@ -4,41 +4,52 @@
 @File: runtime.py
 '''
 
-from contextvars import ContextVar
+import threading
 from typing import Any, Optional
 
-_LAST_RAG_CONTEXT: ContextVar[Optional[dict]] = ContextVar("_LAST_RAG_CONTEXT", default=None)
-_KNOWLEDGE_TOOL_CALLS_THIS_TURN: ContextVar[int] = ContextVar("_KNOWLEDGE_TOOL_CALLS_THIS_TURN", default=0)
-_RAG_STEP_QUEUE: ContextVar[Optional[Any]] = ContextVar("_RAG_STEP_QUEUE", default=None)
-_RAG_STEP_LOOP: ContextVar[Optional[Any]] = ContextVar("_RAG_STEP_LOOP", default=None)
+_STATE_LOCK = threading.RLock()
+_LAST_RAG_CONTEXT: Optional[dict] = None
+_KNOWLEDGE_TOOL_CALLS_THIS_TURN: int = 0
+_RAG_STEP_QUEUE: Optional[Any] = None
+_RAG_STEP_LOOP: Optional[Any] = None
 
 
 def set_last_rag_context(context: dict):
-    _LAST_RAG_CONTEXT.set(context)
+    global _LAST_RAG_CONTEXT
+    with _STATE_LOCK:
+        _LAST_RAG_CONTEXT = context
 
 
 def get_last_rag_context(clear: bool = True) -> Optional[dict]:
-    context = _LAST_RAG_CONTEXT.get()
-    if clear:
-        _LAST_RAG_CONTEXT.set(None)
-    return context
+    global _LAST_RAG_CONTEXT
+    with _STATE_LOCK:
+        context = _LAST_RAG_CONTEXT
+        if clear:
+            _LAST_RAG_CONTEXT = None
+        return context
 
 
 def increase_knowledge_tool_calls_this_turn():
-    current = _KNOWLEDGE_TOOL_CALLS_THIS_TURN.get()
-    _KNOWLEDGE_TOOL_CALLS_THIS_TURN.set(current + 1)
+    global _KNOWLEDGE_TOOL_CALLS_THIS_TURN
+    with _STATE_LOCK:
+        _KNOWLEDGE_TOOL_CALLS_THIS_TURN += 1
 
 
 def get_knowledge_tool_call_this_turn() -> int:
-    return _KNOWLEDGE_TOOL_CALLS_THIS_TURN.get()
+    with _STATE_LOCK:
+        return _KNOWLEDGE_TOOL_CALLS_THIS_TURN
 
 
 def reset_tool_call_guards():
-    _KNOWLEDGE_TOOL_CALLS_THIS_TURN.set(0)
+    global _KNOWLEDGE_TOOL_CALLS_THIS_TURN
+    with _STATE_LOCK:
+        _KNOWLEDGE_TOOL_CALLS_THIS_TURN = 0
 
 
 def set_rag_step_queue(queue):
-    _RAG_STEP_QUEUE.set(queue)
+    global _RAG_STEP_QUEUE, _RAG_STEP_LOOP
+    with _STATE_LOCK:
+        _RAG_STEP_QUEUE = queue
     if queue:
         import asyncio
         try:
@@ -48,14 +59,17 @@ def set_rag_step_queue(queue):
                 loop = asyncio.get_event_loop()
             except RuntimeError:
                 loop = None
-        _RAG_STEP_LOOP.set(loop)
+        with _STATE_LOCK:
+            _RAG_STEP_LOOP = loop
     else:
-        _RAG_STEP_LOOP.set(None)
+        with _STATE_LOCK:
+            _RAG_STEP_LOOP = None
 
 
 def emit_rag_step(icon: str, label: str, detail: str = ""):
-    queue = _RAG_STEP_QUEUE.get()
-    loop = _RAG_STEP_LOOP.get()
+    with _STATE_LOCK:
+        queue = _RAG_STEP_QUEUE
+        loop = _RAG_STEP_LOOP
     if queue is not None and loop is not None:
         step = {"icon": icon, "label": label, "detail": detail}
         try:

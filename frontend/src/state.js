@@ -10,7 +10,7 @@ export function createInitialState(config) {
     showHistorySidebar: false,
     documents: [],
     documentsLoading: false,
-    selectedFile: null,
+    selectedFiles: [],
     isUploading: false,
     uploadProgress: '',
     token: localStorage.getItem(config.TOKEN_STORAGE_KEY) || '',

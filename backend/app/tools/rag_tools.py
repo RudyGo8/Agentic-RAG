@@ -15,7 +15,7 @@ from app.tools.runtime import (
 
 @tool("search_knowledge_base")
 def search_knowledge_base(query: str) -> str:
-    """工具：检索知识库"""
+    """知识库检索."""
     calls_this_turn = get_knowledge_tool_call_this_turn()
     if calls_this_turn >= 1:
         return (
