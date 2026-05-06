@@ -47,6 +47,7 @@ def _escape_milvus_string(value: str) -> str:
 def _write_upload_to_milvus(file_path: Path, filename: str) -> int:
     from app.milvus_writer import milvus_writer
 
+    # 上传接口只负责接收文件，真正的解析、切分和入库都在 writer 里完成。
     return milvus_writer.write_documents(str(file_path), filename)
 
 
@@ -78,6 +79,7 @@ async def upload_document(file: UploadFile = File(...), _: User = Depends(requir
     try:
         os.makedirs(UPLOAD_DIR, exist_ok=True)
         file_path = UPLOAD_DIR / filename
+        # 先落盘到本地 documents 目录，再统一走后续解析链路。
         with open(file_path, "wb") as f:
             f.write(await file.read())
 
@@ -99,6 +101,7 @@ async def batch_upload_document(files: list[UploadFile] = File(...), _: User = D
     os.makedirs(UPLOAD_DIR, exist_ok=True)
     results: list[DocumentUploadResult] = []
 
+    # 批量上传本质上是逐文件串行处理，单个文件失败不会中断整批任务。
     for file in files:
         filename = file.filename or "unknown"
         try:

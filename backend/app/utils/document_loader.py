@@ -1,27 +1,26 @@
-'''
-@create_time: 2026/02/09
-@Author: GeChao
-@File: document_loader.py
-'''
+"""
+Document parsing and chunking for uploaded RAG files.
+"""
+
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import (
-    PyPDFLoader,
-    Docx2txtLoader,
-    UnstructuredExcelLoader,
-    TextLoader,
     CSVLoader,
+    Docx2txtLoader,
+    PyPDFLoader,
+    TextLoader,
+    UnstructuredExcelLoader,
     UnstructuredMarkdownLoader,
 )
-from langchain_core.documents import Document
 
 
 class DocumentLoader:
     def __init__(self, chunk_size: int = 500, chunk_overlap: int = 50):
+        # Prefer paragraph/newline/punctuation boundaries before falling back to length-based splits.
         self._splitter = RecursiveCharacterTextSplitter(
             chunk_size=chunk_size,
             chunk_overlap=chunk_overlap,
             add_start_index=True,
-            separators=["\n\n", "\n", "。", "！", "？", "，", "、", " ", ""],
+            separators=["\n\n", "\n", "。", "，", "；", "：", "、", " ", ""],
         )
 
     @staticmethod
@@ -33,68 +32,77 @@ class DocumentLoader:
         return f"{filename}::p{page_number}::parent"
 
     def _load_legacy_doc(self, file_path: str, filename: str) -> list[dict]:
-        """Extract text from old .doc (OLE2) format using olefile."""
+        """Extract text from old .doc (OLE2) files."""
         import olefile
+        import re
+
         ole = olefile.OleFileIO(file_path)
         try:
-            stream = ole.openstream('WordDocument')
-            raw = stream.read()
-        except Exception:
-            # Try reading the main text stream
             try:
-                stream = ole.openstream('1Table')
+                stream = ole.openstream("WordDocument")
                 raw = stream.read()
             except Exception:
-                ole.close()
-                raise Exception("无法解析 .doc 文件，建议转为 .docx 格式后上传")
-        ole.close()
+                # Fallback for some old Word documents that store content in a different stream.
+                stream = ole.openstream("1Table")
+                raw = stream.read()
+        except Exception as exc:
+            raise Exception("Unable to parse .doc file. Convert it to .docx and try again.") from exc
+        finally:
+            ole.close()
 
-        # Extract readable text from binary (crude but effective for most docs)
-        text = ''
+        # Best-effort extraction of readable text from binary Word content.
+        text = ""
         for byte in raw:
-            ch = chr(byte) if 32 <= byte < 127 or byte in (10, 13) else ' '
+            ch = chr(byte) if 32 <= byte < 127 or byte in (10, 13) else " "
             text += ch
-        # Clean up whitespace
-        import re
-        text = re.sub(r' {2,}', ' ', text)
-        text = re.sub(r'\n{3,}', '\n\n', text)
+
+        text = re.sub(r" {2,}", " ", text)
+        text = re.sub(r"\n{3,}", "\n\n", text)
         page_text = text.strip()
 
         if not page_text:
-            raise Exception("无法从 .doc 文件中提取文本，建议转为 .docx 格式后上传")
+            raise Exception("No readable text could be extracted from the .doc file.")
 
         return self._build_documents(filename, file_path, "Word", {0: page_text})
 
-    def _build_documents(self, filename: str, file_path: str, doc_type: str, pages: dict) -> list[dict]:
-        """Build chunk documents from page dict {page_num: text}."""
+    def _build_documents(
+        self, filename: str, file_path: str, doc_type: str, pages: dict
+    ) -> list[dict]:
+        """Turn page/unit text into leaf chunks with parent chunk metadata."""
         documents = []
         for page_number, page_text in pages.items():
             page_text = page_text.strip()
             if not page_text:
                 continue
+
             parent_chunk_id = self._build_parent_chunk_id(filename, page_number)
+            # Split each page/unit into leaf chunks but keep a shared parent id for later auto-merge.
             texts = self._splitter.split_text(page_text)
             for chunk_idx, text in enumerate(texts):
                 if not text.strip():
                     continue
-                documents.append({
-                    "text": text.strip(),
-                    "filename": filename,
-                    "file_path": file_path,
-                    "file_type": doc_type,
-                    "page_number": page_number,
-                    "chunk_id": self._build_chunk_id(filename, page_number, chunk_idx),
-                    "parent_chunk_id": parent_chunk_id,
-                    "root_chunk_id": parent_chunk_id,
-                    "chunk_idx": chunk_idx,
-                    "parent_text": page_text,
-                    "chunk_level": 3,
-                })
+                documents.append(
+                    {
+                        "text": text.strip(),
+                        "filename": filename,
+                        "file_path": file_path,
+                        "file_type": doc_type,
+                        "page_number": page_number,
+                        "chunk_id": self._build_chunk_id(filename, page_number, chunk_idx),
+                        "parent_chunk_id": parent_chunk_id,
+                        "root_chunk_id": parent_chunk_id,
+                        "chunk_idx": chunk_idx,
+                        # Store the original page/unit text so retrieval can expand back to the parent block.
+                        "parent_text": page_text,
+                        "chunk_level": 3,
+                    }
+                )
         return documents
 
     def load_document(self, file_path: str, filename: str) -> list[dict]:
         file_lower = filename.lower()
 
+        # Parse each file type into text units first, then apply one shared chunking strategy.
         if file_lower.endswith(".pdf"):
             doc_type = "PDF"
             loader = PyPDFLoader(file_path)
@@ -102,7 +110,6 @@ class DocumentLoader:
             doc_type = "Word"
             loader = Docx2txtLoader(file_path)
         elif file_lower.endswith(".doc"):
-            doc_type = "Word"
             return self._load_legacy_doc(file_path, filename)
         elif file_lower.endswith((".xlsx", ".xls")):
             doc_type = "Excel"
@@ -117,7 +124,7 @@ class DocumentLoader:
             doc_type = "CSV"
             loader = CSVLoader(file_path, encoding="utf-8")
         else:
-            raise ValueError(f"不支持的文件类型: {filename}")
+            raise ValueError(f"Unsupported file type: {filename}")
 
         try:
             raw_docs = loader.load()
@@ -126,32 +133,36 @@ class DocumentLoader:
                 page_text = (doc.page_content or "").strip()
                 if not page_text:
                     continue
+
                 page_number = doc.metadata.get("page", idx)
                 try:
                     page_number = int(page_number)
                 except (TypeError, ValueError):
                     page_number = idx
+
                 parent_chunk_id = self._build_parent_chunk_id(filename, page_number)
                 texts = self._splitter.split_text(page_text)
                 for chunk_idx, text in enumerate(texts):
                     if not text.strip():
                         continue
-                    documents.append({
-                        "text": text.strip(),
-                        "filename": filename,
-                        "file_path": file_path,
-                        "file_type": doc_type,
-                        "page_number": page_number,
-                        "chunk_id": self._build_chunk_id(filename, page_number, chunk_idx),
-                        "parent_chunk_id": parent_chunk_id,
-                        "root_chunk_id": parent_chunk_id,
-                        "chunk_idx": chunk_idx,
-                        "parent_text": page_text,
-                        "chunk_level": 3,
-                    })
+                    documents.append(
+                        {
+                            "text": text.strip(),
+                            "filename": filename,
+                            "file_path": file_path,
+                            "file_type": doc_type,
+                            "page_number": page_number,
+                            "chunk_id": self._build_chunk_id(filename, page_number, chunk_idx),
+                            "parent_chunk_id": parent_chunk_id,
+                            "root_chunk_id": parent_chunk_id,
+                            "chunk_idx": chunk_idx,
+                            "parent_text": page_text,
+                            "chunk_level": 3,
+                        }
+                    )
             return documents
-        except Exception as e:
-            raise Exception(f"处理文档失败: {str(e)}")
+        except Exception as exc:
+            raise Exception(f"Failed to process document: {exc}") from exc
 
 
 document_loader = DocumentLoader()

@@ -1,22 +1,19 @@
-'''
-@create_time: 2026/4/27 下午4:00
-@Author: GeChao
-@File: reranker.py
-'''
 import os
+
 import requests
 from dotenv import load_dotenv
+
+from app.config import logger
 
 load_dotenv()
 
 
 def rerank_documents(query: str, docs: list[dict], max_docs: int = 10):
-    # rerank 重排：让模型再一次生成相关性分数
     rerank_api_key = os.getenv("RERANK_API_KEY")
     rerank_model_name = os.getenv("RERANK_MODEL")
     rerank_host = os.getenv("RERANK_BINDING_HOST")
 
-    results = docs
+    results = docs or []
     meta = {
         "rerank_enabled": False,
         "rerank_applied": False,
@@ -25,40 +22,45 @@ def rerank_documents(query: str, docs: list[dict], max_docs: int = 10):
         "rerank_error": None,
     }
 
-    if rerank_api_key and rerank_model_name and rerank_host and results:
-        meta["rerank_enabled"] = True
-        try:
-            # 拿前 10 条，而且每文本块只取前 1000 字符
-            rerank_docs = [r["text"][:1000] for r in results[:max_docs]]
-            rerank_response = requests.post(
-                rerank_host,
-                headers={
-                    "Authorization": f"Bearer {rerank_api_key}",
-                    "Content-Type": "application/json"
-                },
-                json={
-                    "model": rerank_model_name,
-                    "query": query,
-                    "documents": rerank_docs
-                },
-                timeout=30
+    if not (rerank_api_key and rerank_model_name and rerank_host and results):
+        return results, meta
+
+    meta["rerank_enabled"] = True
+    try:
+        rerank_limit = min(max_docs, len(results))
+        rerank_docs = [item.get("text", "")[:1000] for item in results[:rerank_limit]]
+        response = requests.post(
+            rerank_host,
+            headers={
+                "Authorization": f"Bearer {rerank_api_key}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": rerank_model_name,
+                "query": query,
+                "documents": rerank_docs,
+            },
+            timeout=30,
+        )
+        response.raise_for_status()
+        reranked = response.json().get("results", [])
+
+        if reranked:
+            scores = {item["index"]: item["relevance_score"] for item in reranked}
+            for idx, item in enumerate(results[:rerank_limit]):
+                item["rerank_score"] = scores.get(idx, 0.0)
+
+            reranked_head = sorted(
+                results[:rerank_limit],
+                key=lambda item: item.get("rerank_score", 0.0),
+                reverse=True,
             )
-            rerank_response.raise_for_status()
-            rerank_data = rerank_response.json()
+            results = reranked_head + results[rerank_limit:]
+            meta["rerank_applied"] = True
+            meta["rerank_model"] = rerank_model_name
+            meta["rerank_endpoint"] = rerank_host
+    except Exception as exc:
+        meta["rerank_error"] = str(exc)
+        logger.warning("rerank_failed error=%s", exc)
 
-            reranked = rerank_data.get("results", [])
-            if reranked:
-                rerank_scores = {doc["index"]: doc["relevance_score"] for doc in reranked}
-                for i, r in enumerate(results[:max_docs]):
-                    r["rerank_score"] = rerank_scores.get(i, 0.0)
-                results = results[:max_docs]
-                results = sorted(results, key=lambda x: x.get("rerank_score", 0), reverse=True)
-                meta["rerank_applied"] = True
-                meta["rerank_model"] = rerank_model_name
-                meta["rerank_endpoint"] = rerank_host
-        except Exception as e:
-            meta["rerank_error"] = str(e)
     return results, meta
-
-
-

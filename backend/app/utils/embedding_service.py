@@ -1,22 +1,25 @@
-'''
-@create_time: 2025/09/09
-@Author: GeChao
-@File: embedding_service.py
-'''
+"""
+Dense and sparse embedding helpers for RAG ingestion and retrieval.
+"""
+
+import math
 import os
 import re
-import math
 import threading
-import requests
 from collections import Counter
-from app.config import BASE_URL, EMBEDDER, ARK_API_KEY
+
+import requests
+
+from app.config import ARK_API_KEY, BASE_URL, EMBEDDER, EMBEDDING_DIM
 
 
 class EmbeddingService:
     def __init__(self):
-        self.base_url = BASE_URL
+        self.base_url = BASE_URL.rstrip("/")
         self.embedder = EMBEDDER
+        self.embedding_dim = EMBEDDING_DIM
         self.api_key = ARK_API_KEY
+        self.batch_size = int(os.getenv("EMBEDDING_BATCH_SIZE", "10"))
         self.k1 = 1.5
         self.b = 0.75
         self._vocab = {}
@@ -27,22 +30,41 @@ class EmbeddingService:
         self._stats_lock = threading.Lock()
 
     def get_embeddings(self, texts: list[str]) -> list[list[float]]:
+        if not texts:
+            return []
+
         headers = {
             "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         }
+
         try:
             url = f"{self.base_url}/embeddings"
-            data = {
-                "model": self.embedder,
-                "input": texts
-            }
-            response = requests.post(url, headers=headers, json=data, timeout=60)
-            response.raise_for_status()
-            result = response.json()
-            return [item["embedding"] for item in result["data"]]
-        except Exception as e:
-            raise Exception(f"嵌入 API 调用失败: {str(e)}")
+            embeddings: list[list[float]] = []
+
+            # Large PDFs may produce hundreds of chunks. Batch requests to avoid
+            # provider-side payload limits and 400 Bad Request errors.
+            for start in range(0, len(texts), self.batch_size):
+                batch = texts[start : start + self.batch_size]
+                data = {
+                    "model": self.embedder,
+                    "input": batch,
+                    "dimensions": self.embedding_dim,
+                }
+                response = requests.post(url, headers=headers, json=data, timeout=60)
+                if not response.ok:
+                    detail = response.text.strip()
+                    raise Exception(
+                        f"HTTP {response.status_code} {response.reason}"
+                        + (f" - {detail}" if detail else "")
+                    )
+
+                result = response.json()
+                embeddings.extend(item["embedding"] for item in result.get("data", []))
+
+            return embeddings
+        except Exception as exc:
+            raise Exception(f"嵌入 API 调用失败: {exc}") from exc
 
     def get_embedding(self, text: str) -> list[float]:
         embeddings = self.get_embeddings([text])
@@ -51,8 +73,8 @@ class EmbeddingService:
     def tokenize(self, text: str) -> list[str]:
         text = text.lower()
         tokens = []
-        chinese_pattern = re.compile(r'[\u4e00-\u9fff]')
-        english_pattern = re.compile(r'[a-zA-Z]+')
+        chinese_pattern = re.compile(r"[\u4e00-\u9fff]")
+        english_pattern = re.compile(r"[a-zA-Z]+")
         i = 0
         while i < len(text):
             char = text[i]
@@ -72,9 +94,11 @@ class EmbeddingService:
         tokens = self.tokenize(text)
         if not tokens:
             return {}
+
         doc_len = len(tokens)
         tf = Counter(tokens)
         sparse_vector = {}
+
         with self._stats_lock:
             total_docs = max(self._total_docs, 1)
             avg_doc_len = self._avg_doc_len if self._avg_doc_len > 0 else doc_len
@@ -83,15 +107,18 @@ class EmbeddingService:
                 if token not in self._vocab:
                     self._vocab[token] = self._vocab_counter
                     self._vocab_counter += 1
+
                 idx = self._vocab[token]
                 df = self._doc_freq.get(token, 0)
-                # BM25 算法
                 idf = math.log((total_docs + 1.0) / (df + 0.5)) + 1.0
                 numerator = freq * (self.k1 + 1)
-                denominator = freq + self.k1 * (1 - self.b + self.b * doc_len / max(avg_doc_len, 1))
+                denominator = freq + self.k1 * (
+                    1 - self.b + self.b * doc_len / max(avg_doc_len, 1)
+                )
                 score = idf * numerator / denominator
                 if score > 0:
                     sparse_vector[idx] = float(score)
+
         return sparse_vector
 
     def get_sparse_embeddings(self, texts: list[str]) -> list[dict]:
@@ -109,6 +136,7 @@ class EmbeddingService:
                         self._vocab[token] = self._vocab_counter
                         self._vocab_counter += 1
             self._avg_doc_len = total_len / self._total_docs if self._total_docs > 0 else 0
+
         return [self.get_sparse_embedding(text) for text in texts]
 
 

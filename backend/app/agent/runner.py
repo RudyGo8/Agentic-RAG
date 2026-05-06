@@ -1,16 +1,18 @@
 import asyncio
 import json
+
 from langchain_core.messages import AIMessage, AIMessageChunk, HumanMessage
+
 from app.agent.context import prepare_messages
-from app.agent.factory import get_agent, get_recursion_limit, create_agent_instance
+from app.agent.factory import create_agent_instance, get_recursion_limit
 from app.agent.prompt import build_turn_prompt
 from app.agent.trace import collect_rag_trace, extract_usage_from_message
 from app.config import logger
 from app.mcp import mcp_client_manager
 from app.mcp.trace import reset_mcp_trace
 from app.services.conversation_service import conversation_service as storage
-from app.tools.runtime import get_last_rag_context, reset_tool_call_guards, set_rag_step_queue
 from app.tools.registry import TOOL_REGISTRY
+from app.tools.runtime import get_last_rag_context, reset_tool_call_guards, set_rag_step_queue
 
 
 def _extract_tool_name(chunk) -> str | None:
@@ -69,8 +71,8 @@ async def chat_with_agent_stream(user_text: str, user_id: str = "default_user", 
 
     set_rag_step_queue(_RagStepProxy())
 
-    build_prompt = build_turn_prompt(user_text, user_id)
-    agent_messages = [*messages, HumanMessage(content=build_prompt)]
+    turn_prompt = build_turn_prompt(user_text, user_id)
+    agent_messages = [*messages, HumanMessage(content=turn_prompt)]
 
     full_response = ""
     stream_usage = None
@@ -79,9 +81,9 @@ async def chat_with_agent_stream(user_text: str, user_id: str = "default_user", 
         nonlocal full_response, stream_usage
         try:
             async for msg, _metadata in agent.astream(
-                    {"messages": agent_messages},
-                    stream_mode="messages",
-                    config={"recursion_limit": get_recursion_limit()},
+                {"messages": agent_messages},
+                stream_mode="messages",
+                config={"recursion_limit": get_recursion_limit()},
             ):
                 if not isinstance(msg, AIMessageChunk):
                     continue
@@ -111,8 +113,8 @@ async def chat_with_agent_stream(user_text: str, user_id: str = "default_user", 
                 if content:
                     full_response += content
                     await output_queue.put({"type": "content", "content": content})
-        except Exception as e:
-            await output_queue.put({"type": "error", "content": str(e)})
+        except Exception as exc:
+            await output_queue.put({"type": "error", "content": str(exc)})
         finally:
             await output_queue.put(None)
 

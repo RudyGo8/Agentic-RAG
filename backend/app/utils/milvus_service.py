@@ -4,7 +4,7 @@
 @File: milvus_service.py
 '''
 from pymilvus import MilvusClient, DataType, AnnSearchRequest, RRFRanker
-from app.config import MILVUS_HOST, MILVUS_PORT, MILVUS_COLLECTION
+from app.config import EMBEDDING_DIM, MILVUS_HOST, MILVUS_PORT, MILVUS_COLLECTION
 
 
 class MilvusService:
@@ -20,7 +20,7 @@ class MilvusService:
             self.client = MilvusClient(uri=self.uri)
         return self.client
 
-    def init_collection(self, dense_dim: int = 1536, force_recreate: bool = False):
+    def init_collection(self, dense_dim: int = EMBEDDING_DIM, force_recreate: bool = False):
         client = self._get_client()
         if force_recreate or not client.has_collection(self.collection_name):
             if client.has_collection(self.collection_name):
