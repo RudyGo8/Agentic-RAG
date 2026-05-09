@@ -1,7 +1,3 @@
-"""
-Dense and sparse embedding helpers for RAG ingestion and retrieval.
-"""
-
 import math
 import os
 import re
@@ -29,6 +25,7 @@ class EmbeddingService:
         self._avg_doc_len = 0
         self._stats_lock = threading.Lock()
 
+    # 文本转为稠密向量
     def get_embeddings(self, texts: list[str]) -> list[list[float]]:
         if not texts:
             return []
@@ -41,9 +38,7 @@ class EmbeddingService:
         try:
             url = f"{self.base_url}/embeddings"
             embeddings: list[list[float]] = []
-
-            # Large PDFs may produce hundreds of chunks. Batch requests to avoid
-            # provider-side payload limits and 400 Bad Request errors.
+            # 大PDF切块后，分批发送
             for start in range(0, len(texts), self.batch_size):
                 batch = texts[start : start + self.batch_size]
                 data = {
@@ -58,7 +53,7 @@ class EmbeddingService:
                         f"HTTP {response.status_code} {response.reason}"
                         + (f" - {detail}" if detail else "")
                     )
-
+                # json 数据转换成python 字典
                 result = response.json()
                 embeddings.extend(item["embedding"] for item in result.get("data", []))
 
@@ -70,11 +65,12 @@ class EmbeddingService:
         embeddings = self.get_embeddings([text])
         return embeddings[0] if embeddings else []
 
+    # 将一个字、一个单词转为一个token
     def tokenize(self, text: str) -> list[str]:
         text = text.lower()
         tokens = []
         chinese_pattern = re.compile(r"[\u4e00-\u9fff]")
-        english_pattern = re.compile(r"[a-zA-Z]+")
+        english_pattern = re.compile(r"[a-zA-Z]+[a-zA-Z0-9]*|\d+")
         i = 0
         while i < len(text):
             char = text[i]
@@ -90,28 +86,37 @@ class EmbeddingService:
                 i += 1
         return tokens
 
+    # 生成稀疏变量
     def get_sparse_embedding(self, text: str) -> dict:
         tokens = self.tokenize(text)
         if not tokens:
             return {}
 
         doc_len = len(tokens)
+        # 统计词频 "xx": num
         tf = Counter(tokens)
         sparse_vector = {}
 
+        # 线程锁
         with self._stats_lock:
             total_docs = max(self._total_docs, 1)
             avg_doc_len = self._avg_doc_len if self._avg_doc_len > 0 else doc_len
 
             for token, freq in tf.items():
+                # 建立词表编号
                 if token not in self._vocab:
                     self._vocab[token] = self._vocab_counter
                     self._vocab_counter += 1
 
                 idx = self._vocab[token]
+                # DF 文档频率
                 df = self._doc_freq.get(token, 0)
+                # IDF 越稀有的词，权重越高
                 idf = math.log((total_docs + 1.0) / (df + 0.5)) + 1.0
+                # BM25 分数
+                # 词频加权的分子
                 numerator = freq * (self.k1 + 1)
+                # 词频饱和和文档长度惩罚
                 denominator = freq + self.k1 * (
                     1 - self.b + self.b * doc_len / max(avg_doc_len, 1)
                 )
@@ -122,7 +127,10 @@ class EmbeddingService:
         return sparse_vector
 
     def get_sparse_embeddings(self, texts: list[str]) -> list[dict]:
-        tokenized_docs = [self.tokenize(text) for text in texts]
+        tokenized_docs = []
+        for text in texts:
+            tokenized_docs.append(self.tokenize(text))
+        # tokenized_docs = [self.tokenize(text) for text in texts]
         with self._stats_lock:
             total_len = self._avg_doc_len * self._total_docs
             for tokens in tokenized_docs:
@@ -141,3 +149,20 @@ class EmbeddingService:
 
 
 embedding_service = EmbeddingService()
+
+if __name__ == '__main__':
+    embedding_service = EmbeddingService()
+    texts = [
+        "Rag 使用 BM25 和向量检索"
+    ]
+
+    tokenize_text = embedding_service.tokenize(texts[0])
+    print(tokenize_text)
+    # 稠密向量
+    # embedding_text = embedding_service.get_embedding(tokenize_text[1])
+    # 稀疏向量
+    embedding_text = embedding_service.get_sparse_embedding(texts[0])
+    len = len(embedding_text)
+    print(embedding_text)
+    print(len)
+

@@ -24,7 +24,7 @@ DATA_DIR = Path(__file__).resolve().parent.parent.parent.parent / "data"
 UPLOAD_DIR = DATA_DIR / "documents"
 ALLOWED_EXTENSIONS = (".pdf", ".docx", ".doc", ".xlsx", ".xls", ".txt", ".md", ".csv")
 
-
+# 只允许用户传普通文件名，不允许传路径，防止用户通过文件名乱访问服务器文件。
 def _sanitize_filename(raw_name: str) -> str:
     name = (raw_name or "").strip()
     if not name:
@@ -34,20 +34,18 @@ def _sanitize_filename(raw_name: str) -> str:
         raise HTTPException(status_code=400, detail="invalid filename")
     return safe_name
 
-
+# 验证支持文件
 def _validate_supported_file(filename: str) -> None:
     if not filename.lower().endswith(ALLOWED_EXTENSIONS):
         raise HTTPException(status_code=400, detail="Only PDF, Word, and Excel documents are supported")
 
-
+# 把 \ 转成 \\ , 把 " 转为 \"
 def _escape_milvus_string(value: str) -> str:
     return value.replace("\\", "\\\\").replace('"', '\\"')
-
 
 def _write_upload_to_milvus(file_path: Path, filename: str) -> int:
     from app.milvus_writer import milvus_writer
 
-    # 上传接口只负责接收文件，真正的解析、切分和入库都在 writer 里完成。
     return milvus_writer.write_documents(str(file_path), filename)
 
 
@@ -79,7 +77,7 @@ async def upload_document(file: UploadFile = File(...), _: User = Depends(requir
     try:
         os.makedirs(UPLOAD_DIR, exist_ok=True)
         file_path = UPLOAD_DIR / filename
-        # 先落盘到本地 documents 目录，再统一走后续解析链路。
+
         with open(file_path, "wb") as f:
             f.write(await file.read())
 
