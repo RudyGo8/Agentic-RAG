@@ -3,17 +3,6 @@
 @Author: GeChao
 @File: main.py
 """
-
-from pathlib import Path
-
-if __name__ == "__main__" and __package__ is None:
-    import sys
-
-    backend_dir = Path(__file__).resolve().parents[1]
-    app_dir = Path(__file__).resolve().parent
-    sys.path = [p for p in sys.path if Path(p).resolve() != app_dir]
-    sys.path.insert(0, str(backend_dir))
-
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -27,13 +16,15 @@ from app.routes.common.document import router_r1 as document_router_r1
 from app.routes.common.version import router_r1 as version_router_r1
 from app.version import get_app_version
 
-# 前端打包
-FRONTEND_DIR = Path(__file__).resolve().parents[2] / "frontend"
-FRONTEND_DIST_DIR = FRONTEND_DIR / "dist"
+
+# # 前端dist
+# FRONTEND_DIR = Path(__file__).resolve().parents[2] / "frontend"
+# FRONTEND_DIST_DIR = FRONTEND_DIR / "dist"
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # 启动阶段预热数据库和 MCP 客户端，避免首个请求承担初始化开销。
     init_db()
     await mcp_client_manager.initialize()
     yield
@@ -57,6 +48,7 @@ app.add_middleware(
 
 @app.middleware("http")
 async def log_request(request: Request, call_next):
+    # 统一记录请求和响应状态，便于排查流式接口、鉴权和文档管理问题。
     logger.info(f"Request: {request.method} {request.url}")
     response = await call_next(request)
     logger.info(f"Response: {response.status_code} {request.url}")
@@ -68,10 +60,11 @@ app.include_router(chat_router_r1)
 app.include_router(document_router_r1)
 app.include_router(version_router_r1)
 
-if FRONTEND_DIST_DIR.exists():
-    app.mount("/", StaticFiles(directory=str(FRONTEND_DIST_DIR), html=True), name="frontend")
-else:
-    logger.warning("Frontend dist not found at %s, skip static mount.", FRONTEND_DIST_DIR)
+# if FRONTEND_DIST_DIR.exists():
+#     # 生产部署时由 FastAPI 直接托管前端打包产物。
+#     app.mount("/", StaticFiles(directory=str(FRONTEND_DIST_DIR), html=True), name="frontend")
+# else:
+#     logger.warning("Frontend dist not found at %s, skip static mount.", FRONTEND_DIST_DIR)
 
 if __name__ == "__main__":
     import uvicorn

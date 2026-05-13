@@ -26,7 +26,8 @@ class DocumentLoader:
 
     def load_document(self, file_path: str, filename: str) -> list[dict]:
         file_lower = filename.lower()
-        
+
+        # 不同文件类型解析成文本
         if file_lower.endswith(".pdf"):
             doc_type = "PDF"
             loader = PyPDFLoader(file_path)
@@ -42,6 +43,8 @@ class DocumentLoader:
         try:
             raw_docs = loader.load()
             documents = []
+
+            # 提取每个原始单元的正文文本
             for idx, doc in enumerate(raw_docs):
                 page_text = (doc.page_content or "").strip()
                 if not page_text:
@@ -51,8 +54,11 @@ class DocumentLoader:
                     page_number = int(page_number)
                 except (TypeError, ValueError):
                     page_number = idx
+
+                # 当页生成父块ID
                 parent_chunk_id = self._build_parent_chunk_id(filename, page_number)
                 texts = self._splitter.split_text(page_text)
+                # 遍历切出来的小块
                 for chunk_idx, text in enumerate(texts):
                     if not text.strip():
                         continue

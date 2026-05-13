@@ -99,6 +99,21 @@ class DocumentUploadResponse(BaseModel):
     message: str
 
 
+class DocumentUploadResult(BaseModel):
+    filename: str
+    success: bool
+    chunks_processed: int = 0
+    message: str
+
+
+class DocumentBatchUploadResponse(BaseModel):
+    total: int
+    succeeded: int
+    failed: int
+    results: list[DocumentUploadResult]
+    message: str
+
+
 class DocumentDeleteResponse(BaseModel):
     filename: str
     chunks_deleted: int

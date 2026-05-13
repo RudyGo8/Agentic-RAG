@@ -3,9 +3,9 @@
 @Author: GeChao
 @File: result_evaluation.py
 '''
-from typing import Literal
+from typing import Literal, List
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ResultEvaluation(BaseModel):
@@ -18,4 +18,6 @@ class ResultEvaluation(BaseModel):
         "call_clarification"
     ]
     reason: str
+
+
 

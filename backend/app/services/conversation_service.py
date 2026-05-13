@@ -4,14 +4,16 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 
 class ConversationStorage:
+    # 生成redis等缓存的键名，分别用于具体会话的消息列表
     @staticmethod
     def _messages_cache_key(user_id: str, session_id: str) -> str:
         return f"chat_messages:{user_id}:{session_id}"
 
+    # 用户的所有会话列表
     @staticmethod
     def _sessions_cache_key(user_id: str) -> str:
         return f"chat_sessions:{user_id}"
-
+    # 将数据库中的字典格式消息转换为HumanMessage、AIMessage、SystemMessage
     @staticmethod
     def _to_langchain_messages(records: list[dict]) -> list:
         messages = []
@@ -26,14 +28,7 @@ class ConversationStorage:
                 messages.append(SystemMessage(content=content))
         return messages
 
-    def save(
-        self,
-        user_id: str,
-        session_id: str,
-        messages: list,
-        metadata: dict | None = None,
-        extra_message_data: list | None = None,
-    ):
+    def save( self, user_id: str, session_id: str, messages: list, metadata: dict | None = None, extra_message_data: list | None = None):
         from app.cache import cache
         from app.database import SessionLocal
         from app.models.db_chat_message import ChatMessage
@@ -46,6 +41,7 @@ class ConversationStorage:
             if not user:
                 return
 
+            # 查询 ChatSession 会话记录
             session = (
                 db.query(ChatSession)
                 .filter(ChatSession.user_id == user.id, ChatSession.session_id == session_id)
@@ -56,11 +52,13 @@ class ConversationStorage:
                 db.add(session)
                 db.flush()
             else:
+                # 若已存在，更新元数据
                 session.metadata_json = metadata or {}
 
             incoming_rows: list[dict] = []
             for idx, msg in enumerate(messages):
                 rag_trace = None
+                # 遍历传入的 message 列表, idx索引，msg为消息对象
                 if extra_message_data and idx < len(extra_message_data):
                     extra = extra_message_data[idx] or {}
                     rag_trace = extra.get("rag_trace")
@@ -71,7 +69,7 @@ class ConversationStorage:
                         "rag_trace": rag_trace,
                     }
                 )
-
+            # 从数据库查询该会话已保存的所有历史消息记录
             existing_rows = (
                 db.query(ChatMessage)
                 .filter(ChatMessage.session_ref_id == session.id)
@@ -79,9 +77,11 @@ class ConversationStorage:
                 .all()
             )
 
+            # 判断类型与内容是否相同
             def _same_message(lhs: dict, rhs: ChatMessage) -> bool:
                 return lhs["message_type"] == rhs.message_type and lhs["content"] == rhs.content
 
+            # 历史消息数量不超过本次消息数量，且历史消息是本次消息列表的前缀
             can_append = (
                 len(existing_rows) <= len(incoming_rows)
                 and all(_same_message(incoming_rows[idx], row) for idx, row in enumerate(existing_rows))
@@ -91,6 +91,7 @@ class ConversationStorage:
             if can_append:
                 for idx in range(len(existing_rows), len(incoming_rows)):
                     payload = incoming_rows[idx]
+                    # 创建新的 ChatMessage 记录并新增部分加入数据库会话
                     db.add(
                         ChatMessage(
                             session_ref_id=session.id,
@@ -100,7 +101,9 @@ class ConversationStorage:
                         )
                     )
             else:
+                # 删除该会话所有已存在的消息记录
                 db.query(ChatMessage).filter(ChatMessage.session_ref_id == session.id).delete(synchronize_session=False)
+                # 将本次全部消息重新插入数据库：全量覆盖
                 for payload in incoming_rows:
                     db.add(
                         ChatMessage(
@@ -121,16 +124,20 @@ class ConversationStorage:
     def load(self, user_id: str, session_id: str) -> list:
         from app.cache import cache
 
+        # 先读缓存，命中后再转回 LangChain message 对象。
         cached = cache.get_json(self._messages_cache_key(user_id, session_id))
         if cached is not None:
             return self._to_langchain_messages(cached)
 
+        # 缓存未命中时调用，获取原始字典
         records = self.get_session_messages(user_id, session_id)
         return self._to_langchain_messages(records)
 
+    # 提取 session_id 列表返回
     def list_sessions(self, user_id: str) -> list:
         return [item["session_id"] for item in self.list_session_infos(user_id)]
 
+    # 获取用户所有会话摘要信息
     def list_session_infos(self, user_id: str) -> list[dict]:
         from app.cache import cache
         from app.database import SessionLocal
@@ -156,6 +163,7 @@ class ConversationStorage:
             )
             result = []
             for session in sessions:
+                # 列表页只展示摘要信息：session_id、更新时间、消息数。
                 count = db.query(ChatMessage).filter(ChatMessage.session_ref_id == session.id).count()
                 result.append(
                     {
@@ -169,6 +177,7 @@ class ConversationStorage:
         finally:
             db.close()
 
+    # 获取原始消息记录
     def get_session_messages(self, user_id: str, session_id: str) -> list[dict]:
         from app.cache import cache
         from app.database import SessionLocal
@@ -193,6 +202,7 @@ class ConversationStorage:
             if not session:
                 return []
 
+            # 查询用户和会话
             rows = (
                 db.query(ChatMessage)
                 .filter(ChatMessage.session_ref_id == session.id)
@@ -213,6 +223,7 @@ class ConversationStorage:
         finally:
             db.close()
 
+    # 删除会话
     def delete_session(self, user_id: str, session_id: str) -> bool:
         from app.cache import cache
         from app.database import SessionLocal

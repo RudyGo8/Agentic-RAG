@@ -15,7 +15,7 @@ router_r1 = APIRouter(
     tags=["auth"]
 )
 
-
+# 注册接口
 @router_r1.post("/register", response_model=AuthResponse)
 async def register(request: RegisterRequest, db: Session = Depends(get_db)):
     username = (request.username or "").strip()
@@ -35,7 +35,7 @@ async def register(request: RegisterRequest, db: Session = Depends(get_db)):
     token = create_access_token(username=username, role=role)
     return AuthResponse(access_token=token, username=username, role=role)
 
-
+# 登录接口
 @router_r1.post("/login", response_model=AuthResponse)
 async def login(request: LoginRequest, db: Session = Depends(get_db)):
     user = authenticate_user(db, request.username, request.password)

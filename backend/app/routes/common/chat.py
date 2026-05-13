@@ -24,9 +24,9 @@ router_r1 = APIRouter(
 )
 
 
+# 流式返回
 @router_r1.post("/stream")
 async def chat_stream_endpoint(request: ChatRequest, current_user: User = Depends(get_current_user)):
-    """SSE 流式输出"""
     session_id = request.session_id or "default_session"
     return StreamingResponse(
         chat_service.stream_chat(request.message, current_user.username, session_id),

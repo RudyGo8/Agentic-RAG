@@ -43,6 +43,7 @@ def create_agent_instance(tools: list | None = None ):
             "Avoid repeatedly calling the same MCP source unless new evidence is required. "
             "For weather questions, use get_current_weather when current weather information is needed. "
             "If evidence is insufficient, explicitly state limitations."
+            "请用中文简要说明，只回答核心结论；如果证据不足，直接说明证据不足，不要编造。"
         ),
     )
     return agent, model
@@ -51,17 +52,11 @@ def create_agent_instance(tools: list | None = None ):
 agent, model = create_agent_instance()
 
 
-def get_agent(tools: list | None = None, extra_tools: list | None = None):
-    agent, _ = create_agent_instance(tools=tools, extra_tools=extra_tools)
-    return agent
-
-
 def get_model():
     return model
 
 
 def get_recursion_limit() -> int:
     return AGENT_RECURSION_LIMIT
-
 
 

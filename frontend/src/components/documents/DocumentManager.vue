@@ -9,19 +9,30 @@
       <h3><i class="fas fa-upload"></i> 上传文档</h3>
       <div class="upload-area">
         <input
-          type="file"
-          ref="fileInput"
-          @change="handleFileSelect"
-          accept=".pdf,.doc,.docx,.xls,.xlsx"
-          style="display: none"
+            type="file"
+            ref="fileInput"
+            multiple
+            @change="handleFileSelect"
+            accept=".pdf,.doc,.docx,.xls,.xlsx"
+            style="display: none"
         />
         <button @click="$refs.fileInput.click()" class="upload-btn">
           <i class="fas fa-cloud-upload-alt"></i> 选择文件
         </button>
-        <div v-if="selectedFile" class="selected-file">
-          <i class="fas fa-file"></i> {{ selectedFile.name }}
-          <button @click="$emit('upload')" class="btn-primary" :disabled="uploading">
-            <i class="fas fa-upload"></i> {{ uploading ? '上传中...' : '开始上传' }}
+        <div v-if="selectedFiles.length > 0" class="selected-file">
+          <div>
+            <i class="fas fa-file"></i>
+            已选择 {{ selectedFiles.length }} 个文件
+          </div>
+
+          <ul class="selected-file-list">
+            <li v-for="file in selectedFiles" :key="file.name">
+              {{ file.name }}
+            </li>
+          </ul>
+
+          <button @click="$emit('upload-files')" class="btn-primary" :disabled="uploading">
+            <i class="fas fa-upload"></i> {{ uploading ? '上传中...' : '批量上传' }}
           </button>
         </div>
         <div v-if="uploadProgress" class="upload-progress">
@@ -79,9 +90,9 @@ export default {
       type: Boolean,
       default: false
     },
-    selectedFile: {
-      type: Object,
-      default: null
+    selectedFiles: {
+      type: Array,
+      default: () => []
     },
     uploading: {
       type: Boolean,
@@ -92,11 +103,11 @@ export default {
       default: ''
     }
   },
-  emits: ['select-file', 'upload', 'refresh', 'delete-document'],
+  emits: ['select-files', 'upload-files', 'refresh', 'delete-document'],
   methods: {
     handleFileSelect(event) {
-      const files = event.target.files;
-      this.$emit('select-file', files && files.length > 0 ? files[0] : null);
+      const files = Array.from(event.target.files || []);
+      this.$emit('select-files', files);
     },
     getFileIcon(fileType) {
       if (fileType === 'PDF') return 'fas fa-file-pdf';

@@ -14,7 +14,6 @@ GRADE_PROMPT = (
 
 )
 
-
 REWRITE_STRATEGY_PROMPT = """
 你是一个 RAG 查询重写策略选择器。
 

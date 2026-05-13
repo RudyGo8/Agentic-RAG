@@ -2,7 +2,7 @@ from langchain_core.messages import SystemMessage
 
 from app.agent.factory import get_model
 
-
+# 上下文压缩机制，自动将早期对话总结成简短摘要
 def summarize_old_messages(model, messages: list) -> str:
     old_conversation = "\n".join(
         [f"{'用户' if msg.type == 'human' else 'AI'}: {msg.content}" for msg in messages]
@@ -21,5 +21,6 @@ def summarize_old_messages(model, messages: list) -> str:
 def prepare_messages(messages: list) -> list:
     if len(messages) <= 50:
         return messages
+    # 取前 40 条消息进行总结
     summary = summarize_old_messages(get_model(), messages[:40])
     return [SystemMessage(content=f"之前的对话摘要：\n{summary}")] + messages[40:]

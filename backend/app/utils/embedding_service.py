@@ -9,14 +9,16 @@ import math
 import threading
 import requests
 from collections import Counter
-from app.config import BASE_URL, EMBEDDER, ARK_API_KEY
+from app.config import BASE_URL, EMBEDDER, ARK_API_KEY, EMBEDDING_DIM
 
 
 class EmbeddingService:
     def __init__(self):
         self.base_url = BASE_URL
         self.embedder = EMBEDDER
+        self.embedding_dim = EMBEDDING_DIM
         self.api_key = ARK_API_KEY
+        self.batch_size = int(os.getenv("EMBEDDING_BATCH_SIZE", "10"))
         self.k1 = 1.5
         self.b = 0.75
         self._vocab = {}
@@ -26,21 +28,39 @@ class EmbeddingService:
         self._avg_doc_len = 0
         self._stats_lock = threading.Lock()
 
+    # 文本转为稠密向量
     def get_embeddings(self, texts: list[str]) -> list[list[float]]:
+        if not texts:
+            return []
+
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
         }
+
         try:
             url = f"{self.base_url}/embeddings"
-            data = {
-                "model": self.embedder,
-                "input": texts
-            }
-            response = requests.post(url, headers=headers, json=data, timeout=60)
-            response.raise_for_status()
-            result = response.json()
-            return [item["embedding"] for item in result["data"]]
+            embeddings: list[list[float]] = []
+
+            # 大pdf切块后，分批发送
+            for start in range(0, len(texts), self.batch_size):
+                batch = texts[start:start + self.batch_size]
+                data = {
+                    "model": self.embedder,
+                    "inputs": batch,
+                    "dimensions": self.embedding_dim
+                }
+                response = requests.post(url, headers=headers, json=data, timeout=60)
+                if not response.ok:
+                    detail = response.text.strip()
+                    raise Exception(
+                        f"HTTP {response.status_code} {response.reason}"
+                        + (f" - {detail}" if detail else "")
+                    )
+                # json 数据转换成python 字典
+                result = response.json()
+                embeddings.extend(item["embedding"] for item in result.get("data", []))
+            return embeddings
         except Exception as e:
             raise Exception(f"嵌入 API 调用失败: {str(e)}")
 
@@ -95,6 +115,7 @@ class EmbeddingService:
         return sparse_vector
 
     def get_sparse_embeddings(self, texts: list[str]) -> list[dict]:
+        # 分词
         tokenized_docs = [self.tokenize(text) for text in texts]
         with self._stats_lock:
             total_len = self._avg_doc_len * self._total_docs

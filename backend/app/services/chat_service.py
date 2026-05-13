@@ -14,10 +14,12 @@ class ChatService:
 
     @staticmethod
     def get_session_messages(user_id: str, session_id: str) -> list[dict]:
+        # 读取某个会话的完整消息历史
         return storage.get_session_messages(user_id, session_id)
 
     @staticmethod
     def get_session_list(user_id: str) -> list[dict]:
+        # 会话摘要列表
         return storage.list_session_infos(user_id)
 
     @staticmethod

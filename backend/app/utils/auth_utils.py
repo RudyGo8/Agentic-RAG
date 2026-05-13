@@ -16,9 +16,10 @@ from app.database import get_db
 from app.models.db_user import User
 from app.config import JWT_SECRET_KEY, JWT_ALGORITHM, JWT_EXPIRE_MINUTES, ADMIN_INVITE_CODE, PASSWORD_PBKDF2_ROUNDS
 
+# 从请求头 Authorization: Bearer <token> 取 token
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/r1/auth/login")
 
-
+#
 def verify_password(plain_password: str, password_hash: str) -> bool:
     if not plain_password or not password_hash:
         return False
@@ -33,7 +34,7 @@ def verify_password(plain_password: str, password_hash: str) -> bool:
             return False
     return False
 
-
+# 用户密码生成随机salt，pbkdf2 + SHA256 多次加密转成字符串，返回哈希
 def get_password_hash(password: str) -> str:
     if not password:
         raise ValueError("password is required")
@@ -43,7 +44,7 @@ def get_password_hash(password: str) -> str:
     digest_b64 = base64.b64encode(digest).decode("ascii")
     return f"pbkdf2_sha256${PASSWORD_PBKDF2_ROUNDS}${salt_b64}${digest_b64}"
 
-
+# 生成登录验证
 def create_access_token(username: str, role: str) -> str:
     expire = datetime.now(timezone.utc) + timedelta(minutes=JWT_EXPIRE_MINUTES)
     payload = {"sub": username, "role": role, "exp": expire}
@@ -59,7 +60,7 @@ def decode_access_token(token: str) -> dict | None:
     except JWTError:
         return None
 
-
+# 验证用户密码
 def authenticate_user(db: Session, username: str, password: str) -> User | None:
     user = db.query(User).filter(User.username == username).first()
     if not user:
@@ -68,7 +69,7 @@ def authenticate_user(db: Session, username: str, password: str) -> User | None:
         return None
     return user
 
-
+# 鉴权：从请求头Bearer token 解码用户名，验证user
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> User:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -94,7 +95,7 @@ def require_admin(current_user: User = Depends(get_current_user)) -> User:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="管理员权限不足")
     return current_user
 
-
+# 分配角色
 def resolve_role(requested_role: str | None, admin_code: str | None) -> str:
     role = (requested_role or "user").strip().lower()
     if role != "admin":

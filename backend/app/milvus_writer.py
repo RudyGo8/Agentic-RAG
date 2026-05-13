@@ -14,12 +14,14 @@ class MilvusWriter:
     def write_documents(self, file_path: str, filename: str) -> int:
         self.milvus_service.init_collection()
 
+        # 解析文件并切成标准化 chunk 列表
         docs = self.document_loader.load_document(file_path, filename)
         if not docs:
             return 0
 
+        # 父块单独保存，供检索阶段 auto-merge 回填完整上下文
         self._save_parent_chunks(docs)
-        
+        # 只对叶子块做向量化，Milvus 里存的是可检索的最小单元
         texts = [doc["text"] for doc in docs]
         dense_embeddings = self.embedding_service.get_embeddings(texts)
         sparse_embeddings = self.embedding_service.get_sparse_embeddings(texts)
@@ -27,6 +29,7 @@ class MilvusWriter:
         data = []
         for i, doc in enumerate(docs):
             data.append({
+                # Milvus 的 text 字段上限是2000，这里做一次截断
                 "text": doc["text"][:2000],
                 "filename": doc["filename"],
                 "file_type": doc["file_type"],
@@ -37,7 +40,8 @@ class MilvusWriter:
                 "dense_embedding": dense_embeddings[i] if i < len(dense_embeddings) else [],
                 "sparse_embedding": sparse_embeddings[i] if i < len(sparse_embeddings) else {},
             })
-        
+
+        # 叶子块+双向量一起写入 Milvus，供后续 hybrid search 使用
         self.milvus_service.insert(data)
         return len(docs)
 
@@ -51,6 +55,8 @@ class MilvusWriter:
                 continue
             if parent_id in parent_payload:
                 continue
+
+            # 同一页可能切出多个字块，这里只保留一份父块正文：“rag.pdf::p1::parent"
             parent_payload[parent_id] = {
                 "text": parent_text,
                 "metadata": {

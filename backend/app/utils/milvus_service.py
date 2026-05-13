@@ -22,13 +22,15 @@ class MilvusService:
 
     def init_collection(self, dense_dim: int = 1536, force_recreate: bool = False):
         client = self._get_client()
+        # 如果强制重建或者collection不存在，就创建collection
         if force_recreate or not client.has_collection(self.collection_name):
             if client.has_collection(self.collection_name):
                 try:
                     client.drop_collection(self.collection_name)
                 except:
                     pass
-            
+
+            # 创建结构，添加字段
             schema = client.create_schema(auto_id=True, enable_dynamic_field=True)
             schema.add_field("id", DataType.INT64, is_primary=True, auto_id=True)
             schema.add_field("dense_embedding", DataType.FLOAT_VECTOR, dim=dense_dim)
@@ -41,8 +43,11 @@ class MilvusService:
             schema.add_field("parent_chunk_id", DataType.VARCHAR, max_length=512)
             schema.add_field("chunk_level", DataType.INT64)
 
+            # 创建索引参数
             index_params = client.prepare_index_params()
+            # dense索引： HNSW近似最近邻索引、内积相似度、图索引每个节点连数量16个、搜索宽度256
             index_params.add_index(field_name="dense_embedding", index_type="HNSW", metric_type="IP", params={"M": 16, "efConstruction": 256})
+            # sparse索引：SPARSE_INVERTED_INDEX倒排索引、内积相似度、丢弃部分低权重项0.2
             index_params.add_index(field_name="sparse_embedding", index_type="SPARSE_INVERTED_INDEX", metric_type="IP", params={"drop_ratio_build": 0.2})
 
             client.create_collection(collection_name=self.collection_name, schema=schema, index_params=index_params)

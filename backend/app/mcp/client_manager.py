@@ -121,12 +121,6 @@ class MCPClientManager:
         await self.initialize()
         return list(self._agent_tools)
 
-    def tool_names(self) -> list[str]:
-        return [
-            str(getattr(tool, "name", "unknown"))
-            for tool in self._agent_tools
-        ]
-
     def _get_client_class(self):
         global MultiServerMCPClient, _MCP_IMPORT_ERROR
 
