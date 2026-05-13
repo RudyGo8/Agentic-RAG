@@ -35,7 +35,9 @@ def grade_documents_node(state: RAGState) -> RAGState:
     response = grader.with_structured_output(GradeDocuments).invoke(
         [{"role": "user", "content": prompt}]
     )
-    score = (response.binary_score or "").strip().lower()
+    score = (getattr(response, 'binary_score', None) or "").strip().lower()
+    if not score:
+        score = "yes"  # 解析失败时默认认为相关，避免误重写
 
     # 路由决策：yes 直接回答，no 重写查询
     route = "generate_answer" if score == "yes" else "rewrite_question"

@@ -27,7 +27,7 @@ MILVUS_PORT = os.getenv("MILVUS_PORT", "19530")
 MILVUS_COLLECTION = os.getenv("MILVUS_COLLECTION", "rag_embeddings")
 
 ARK_API_KEY = os.getenv("ARK_API_KEY", "")
-MODEL = os.getenv("MODEL", "qwen-plus")
+MODEL = os.getenv("MODEL")
 BASE_URL = os.getenv("BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1")
 EMBEDDER = os.getenv("EMBEDDER", "text-embedding-v2")
 EMBEDDING_DIM = int(os.getenv("EMBEDDING_DIM", "1536"))

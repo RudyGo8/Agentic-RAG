@@ -13,7 +13,7 @@ def retrieve_documents(query: str, top_k: int = 5) -> dict:
     candidate_k = top_k * 2
     docs, retrieve_meta = vector_retrieve(query, candidate_k)
     docs = normalize_docs(docs)
-    docs, rerank_meta = rerank_documents(query, docs)
+    docs, rerank_meta = rerank_documents(query, docs, max_docs=len(docs))
     docs = normalize_docs(docs)
     docs, merge_meta = auto_merge_chunks(docs, top_k)
     docs = normalize_docs(docs)

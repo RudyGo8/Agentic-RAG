@@ -69,6 +69,7 @@ class SessionMessagesResponse(BaseModel):
 
 class SessionInfo(BaseModel):
     session_id: str
+    title: str = ""
     updated_at: str
     message_count: int
 

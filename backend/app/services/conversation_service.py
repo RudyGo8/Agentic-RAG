@@ -165,9 +165,20 @@ class ConversationStorage:
             for session in sessions:
                 # 列表页只展示摘要信息：session_id、更新时间、消息数。
                 count = db.query(ChatMessage).filter(ChatMessage.session_ref_id == session.id).count()
+                first_user_message = (
+                    db.query(ChatMessage.content)
+                    .filter(
+                        ChatMessage.session_ref_id == session.id,
+                        ChatMessage.message_type == "human",
+                    )
+                    .order_by(ChatMessage.id.asc())
+                    .first()
+                )
+                title = (first_user_message[0] if first_user_message else "") or ""
                 result.append(
                     {
                         "session_id": session.session_id,
+                        "title": title[:30],
                         "updated_at": session.update_time.isoformat() if session.update_time else "",
                         "message_count": count,
                     }
