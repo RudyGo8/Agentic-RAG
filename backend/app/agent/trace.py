@@ -10,6 +10,7 @@ load_dotenv()
 MODEL = os.getenv("MODEL")
 
 
+# token 用量汇总
 def _normalize_usage(usage: dict | None) -> dict | None:
     if not isinstance(usage, dict):
         return None
@@ -22,7 +23,7 @@ def _normalize_usage(usage: dict | None) -> dict | None:
         "total_tokens": int(total_tokens),
     }
 
-
+# 提取token使用量
 def extract_usage_from_message(msg) -> dict | None:
     if msg is None:
         return None
@@ -30,6 +31,8 @@ def extract_usage_from_message(msg) -> dict | None:
     normalized = _normalize_usage(usage)
     if normalized:
         return normalized
+
+    # 从 response_metadata 获取
     response_meta = getattr(msg, "response_metadata", None) or {}
     if isinstance(response_meta, dict):
         normalized = _normalize_usage(response_meta.get("token_usage"))

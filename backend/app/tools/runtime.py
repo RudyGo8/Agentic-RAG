@@ -29,13 +29,13 @@ def get_last_rag_context(clear: bool = True) -> Optional[dict]:
             _LAST_RAG_CONTEXT = None
         return context
 
-
+# 知识库调用计数+1
 def increase_knowledge_tool_calls_this_turn():
     global _KNOWLEDGE_TOOL_CALLS_THIS_TURN
     with _STATE_LOCK:
         _KNOWLEDGE_TOOL_CALLS_THIS_TURN += 1
 
-
+# 知识库调用次数
 def get_knowledge_tool_call_this_turn() -> int:
     with _STATE_LOCK:
         return _KNOWLEDGE_TOOL_CALLS_THIS_TURN
@@ -70,11 +70,13 @@ def set_rag_step_queue(queue):
             _RAG_STEP_LOOP = None
 
 
+# 异步进度上报
 def emit_rag_step(icon: str, label: str, detail: str = ""):
     with _STATE_LOCK:
         queue = _RAG_STEP_QUEUE
         loop = _RAG_STEP_LOOP
     if queue is not None and loop is not None:
+        # 异步安全投递到队列
         step = {"icon": icon, "label": label, "detail": detail}
         try:
             if not loop.is_closed():

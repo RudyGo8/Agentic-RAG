@@ -19,8 +19,8 @@ def search_knowledge_base(query: str) -> str:
     calls_this_turn = get_knowledge_tool_call_this_turn()
     if calls_this_turn >= 1:
         return (
-            "TOOL_CALL_LIMIT_REACHED: search_knowledge_base has already been called once in this turn. "
-            "Use the existing retrieval result and provide the final answer directly."
+            "本轮已经调用过知识库了 "
+            "请基于已有结果直接回答"
         )
 
     increase_knowledge_tool_calls_this_turn()
@@ -35,7 +35,7 @@ def search_knowledge_base(query: str) -> str:
         set_last_rag_context({"rag_trace": rag_trace})
 
     if not docs:
-        return "No relevant documents found in the knowledge base."
+        return "没有找到相关文档"
 
     formatted = format_docs(docs)
-    return "Retrieved Chunks:\n" + "\n\n---\n\n".join(formatted)
+    return "检索块:\n" + "\n\n---\n\n".join(formatted)

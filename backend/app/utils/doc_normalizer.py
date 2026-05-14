@@ -34,14 +34,10 @@ def normalize_docs(docs: Any) -> list[dict]:
     """
     将检索结果统一转换成 list[dict]。
     """
-
     if not docs:
         return []
-
     if isinstance(docs, dict):
         docs = docs.get("docs") or docs.get("results") or []
-
     if isinstance(docs, str):
         return [{"text": docs}]
-
     return [normalize_doc(doc) for doc in docs]

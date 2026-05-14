@@ -3,9 +3,10 @@ from app.database import Base
 from app.cache import cache
 
 
+# 父级分块存储器
 class ParentChunkStore:
-    """父级分块存储"""
-    
+
+    # 根据块id 生成缓存key
     def _cache_key(self, chunk_id: str) -> str:
         return f"parent_chunk:{chunk_id}"
     
@@ -26,6 +27,7 @@ class ParentChunkStore:
                     "text": row.text,
                     "metadata": row.metadata_json or {}
                 }
+                # 把查询结果写入缓存
                 cache.set_json(self._cache_key(chunk_id), result)
                 return result
             return None
@@ -76,6 +78,7 @@ class ParentChunkStore:
                 )
                 db.add(chunk)
             db.commit()
+            # 数据库块数据更新，删除redis缓存
             cache.delete(self._cache_key(chunk_id))
         finally:
             db.close()

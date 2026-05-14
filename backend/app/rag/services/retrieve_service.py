@@ -8,8 +8,9 @@ from app.rag.services.reranker import rerank_documents
 from app.rag.services.merger import auto_merge_chunks
 from app.utils.doc_normalizer import normalize_docs
 
-
+# 文档检索
 def retrieve_documents(query: str, top_k: int = 5) -> dict:
+    # 先检索2倍文档
     candidate_k = top_k * 2
     docs, retrieve_meta = vector_retrieve(query, candidate_k)
     docs = normalize_docs(docs)
@@ -19,6 +20,7 @@ def retrieve_documents(query: str, top_k: int = 5) -> dict:
     docs = normalize_docs(docs)
 
     # d: str , -> dict
+    # 添加最终排名
     for index, doc in enumerate(docs):
         doc["final_rank"] = index + 1
 

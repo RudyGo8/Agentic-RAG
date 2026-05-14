@@ -6,9 +6,8 @@
 from app.utils.embedding_service import embedding_service
 from app.utils.milvus_service import milvus_service
 
-
+# 向量检索
 def vector_retrieve(query: str, top_k: int = 5) -> tuple[list[dict], dict]:
-
     milvus_service.init_collection()
     dense_embedding = embedding_service.get_embedding(query)
     sparse_embedding = embedding_service.get_sparse_embedding(query)

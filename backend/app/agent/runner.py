@@ -3,7 +3,6 @@ import json
 from langchain_core.messages import AIMessage, AIMessageChunk, HumanMessage
 from app.agent.context import prepare_messages
 from app.agent.factory import get_recursion_limit, create_agent_instance
-from app.agent.prompt import build_turn_prompt
 from app.agent.trace import collect_rag_trace, extract_usage_from_message
 from app.config import logger
 from app.mcp import mcp_client_manager
@@ -21,6 +20,7 @@ def _extract_tool_name(chunk) -> str | None:
     return str(name).strip() if name else None
 
 
+# 补全trace
 def _backfill_trace(rag_trace: dict, called_tools: set[str], mcp_tool_names: set[str], rag_step_count: int) -> dict:
     if not isinstance(rag_trace, dict):
         rag_trace = {}
@@ -81,6 +81,7 @@ async def chat_with_agent_stream(user_text: str, user_id: str = "default_user", 
 
     set_rag_step_queue(_RagStepProxy())
 
+    # 完整消息
     agent_messages = [*messages, HumanMessage(content=user_text.strip())]
 
     full_response = ""
@@ -103,14 +104,15 @@ async def chat_with_agent_stream(user_text: str, user_id: str = "default_user", 
                     stream_usage = usage
 
                 tool_call_chunks = getattr(msg, "tool_call_chunks", None)
+                # 工具调用块不直出给用户，只用于记录本轮到底调了哪些工具。
                 if tool_call_chunks:
-                    # 工具调用块不直出给用户，只用于记录本轮到底调了哪些工具。
                     for chunk in tool_call_chunks:
                         tool_name = _extract_tool_name(chunk)
                         if tool_name:
                             trace_state["called_tools"].add(tool_name)
                     continue
 
+                # 提取内容
                 content = ""
                 if isinstance(msg.content, str):
                     content = msg.content
@@ -122,6 +124,7 @@ async def chat_with_agent_stream(user_text: str, user_id: str = "default_user", 
                             content += block.get("text", "")
 
                 if content:
+                    # 推送到队列
                     full_response += content
                     await output_queue.put({"type": "content", "content": content})
         except Exception as e:
@@ -129,14 +132,18 @@ async def chat_with_agent_stream(user_text: str, user_id: str = "default_user", 
         finally:
             await output_queue.put(None)
 
+    # 立即创建后台任务
     agent_task = asyncio.create_task(_agent_worker())
 
     try:
         while True:
+            # 持续从生产者的输出队列中异步获取事件
             event = await output_queue.get()
             if event is None:
                 break
             yield f"data: {json.dumps(event)}\n\n"
+
+    # 断开连接情况
     except GeneratorExit:
         agent_task.cancel()
         try:
@@ -145,12 +152,13 @@ async def chat_with_agent_stream(user_text: str, user_id: str = "default_user", 
             pass
         raise
     finally:
+        # 清除rag步骤队列
         set_rag_step_queue(None)
         if not agent_task.done():
             agent_task.cancel()
 
     rag_trace = collect_rag_trace(stream_usage)
-    # 某些模型返回的工具元数据不完整，这里用本地统计兜底补全 trace。
+    # 用本地统计兜底补全 trace。
     rag_trace = _backfill_trace(
         rag_trace,
         called_tools=trace_state["called_tools"],
@@ -172,9 +180,11 @@ async def chat_with_agent_stream(user_text: str, user_id: str = "default_user", 
     if rag_trace:
         yield f"data: {json.dumps({'type': 'trace', 'rag_trace': rag_trace})}\n\n"
 
+    # 标准 SSE 结束标记：前端通过监听[DONE]来判断流式响应
     yield "data: [DONE]\n\n"
 
-    # 最终只持久化“用户原始问题 + AI 整体回答”，trace 挂在最后一条 AI 消息上。
+    # 消息列表：历史会话+本轮用户问题+本轮AI回答
     persisted_messages = [*messages, HumanMessage(content=user_text), AIMessage(content=full_response)]
+    # 最后一条AI回答附带trace
     extra_message_data = [None] * (len(persisted_messages) - 1) + [{"rag_trace": rag_trace}]
     storage.save(user_id, session_id, persisted_messages, extra_message_data=extra_message_data)

@@ -10,7 +10,7 @@ from app.rag.state import RAGState
 from app.tools.runtime import emit_rag_step
 
 
-# 相关性评估
+# 文档相关性评估
 def grade_documents_node(state: RAGState) -> RAGState:
     grader = _get_grader_model()
     emit_rag_step("📊", "正在评估文档相关性...")
