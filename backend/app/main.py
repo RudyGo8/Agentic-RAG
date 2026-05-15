@@ -13,7 +13,7 @@ from app.utils.log import get_logger, setup_logging
 setup_logging()
 logger = get_logger(__name__)
 
-from app.mcp.client_manager import mcp_client_manager
+from app.mcp_gateway.client_manager import mcp_client_manager
 from app.routes.common.auth import router_r1 as auth_router_r1
 from app.routes.common.chat import router_r1 as chat_router_r1
 from app.routes.common.document import router_r1 as document_router_r1

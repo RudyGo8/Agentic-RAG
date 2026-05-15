@@ -5,6 +5,9 @@
 '''
 from pymilvus import MilvusClient, DataType, AnnSearchRequest, RRFRanker
 from app.config import EMBEDDING_DIM, MILVUS_HOST, MILVUS_PORT, MILVUS_COLLECTION
+from app.utils.log import get_logger
+
+logger = get_logger(__name__)
 
 
 class MilvusService:
@@ -27,8 +30,8 @@ class MilvusService:
             if client.has_collection(self.collection_name):
                 try:
                     client.drop_collection(self.collection_name)
-                except:
-                    pass
+                except Exception:
+                    logger.warning("Failed to drop collection", collection=self.collection_name)
 
             # 创建结构，添加字段
             schema = client.create_schema(auto_id=True, enable_dynamic_field=True)
@@ -56,7 +59,7 @@ class MilvusService:
             # 加载到内存，持久化
             client.load_collection(self.collection_name)
         except Exception:
-            pass
+            logger.warning("Failed to load collection", collection=self.collection_name)
 
     def insert(self, data: list[dict]):
         return self._get_client().insert(self.collection_name, data)
@@ -115,6 +118,7 @@ class MilvusService:
                     })
             return formatted
         except Exception:
+            logger.exception("Hybrid search failed, falling back to dense")
             return self.dense_search(dense_embedding, top_k)
 
     def dense_search(self, dense_embedding: list[float], top_k: int = 5) -> list[dict]:

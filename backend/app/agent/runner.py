@@ -6,7 +6,7 @@ from app.agent.factory import get_recursion_limit, create_agent_instance
 from app.agent.trace import collect_rag_trace, extract_usage_from_message
 from app.utils.log import get_logger
 from app.tools.gateway import tool_gateway
-from app.mcp.trace import reset_mcp_trace
+from app.mcp_gateway.trace import reset_mcp_trace
 from app.services.conversation_service import conversation_service as storage
 from app.tools.runtime import get_last_rag_context, reset_tool_call_guards, set_rag_step_queue
 
@@ -120,6 +120,7 @@ async def chat_with_agent_stream(user_text: str, user_id: str = "default_user", 
                     full_response += content
                     await output_queue.put({"type": "content", "content": content})
         except Exception as e:
+            logger.exception("Agent stream error")
             await output_queue.put({"type": "error", "content": str(e)})
         finally:
             await output_queue.put(None)

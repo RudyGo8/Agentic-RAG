@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/2-rag-agent.iml" filepath="$PROJECT_DIR$/.idea/2-rag-agent.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/TraceAgentic_RAG.iml" filepath="$PROJECT_DIR$/.idea/TraceAgentic_RAG.iml" />
     </modules>
   </component>
 </project>

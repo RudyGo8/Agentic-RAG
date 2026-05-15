@@ -15,6 +15,7 @@ dependencies = [
     "langgraph>=0.2.31",
     "langsmith>=0.0.0",
     "mcp>=1.20.0",
+    "mysql-mcp-server>=0.2.2",
     "openpyxl>=0.0.0",
     "passlib[bcrypt]>=0.0.0",
     "pydantic>=2.8.0",

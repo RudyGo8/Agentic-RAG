@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(Get-ChildItem -Path \"F:\\\\AI_Models\\\\DEMO\\\\My_Demo\\\\TraceAgentic RAG\" -Depth 1 -Name)",
+      "Bash(Sort-Object)",
+      "Bash(where.exe python *)",
+      "Bash(where.exe python3 *)",
+      "Bash(ls -la *.bat)",
+      "Bash(ls -la *.ps1)",
+      "Bash(dir /b /s *.bat)",
+      "Bash(dir /b /s .venv)",
+      "Bash(dir /b /s pyvenv.cfg)",
+      "Bash(dir /b /s Pipfile)",
+      "Bash(dir /b /s poetry.lock)",
+      "Bash(pip install *)",
+      "Bash(.venv\\\\Scripts\\\\python.exe -c \"import langchain.agents; print\\(type\\(langchain.agents.create_agent\\)\\); print\\(langchain.agents.create_agent.__module__\\); print\\(langchain.agents.__file__\\)\")"
+    ]
+  }
+}

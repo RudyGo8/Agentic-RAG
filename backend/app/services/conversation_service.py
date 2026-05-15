@@ -2,6 +2,10 @@ from datetime import datetime
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
+from app.utils.log import get_logger
+
+logger = get_logger(__name__)
+
 
 class ConversationStorage:
     # 生成redis等缓存的键名，分别用于具体会话的消息列表
@@ -118,6 +122,10 @@ class ConversationStorage:
             db.commit()
             cache.delete(self._messages_cache_key(user_id, session_id))
             cache.delete(self._sessions_cache_key(user_id))
+        except Exception:
+            db.rollback()
+            logger.exception("Failed to save conversation user_id=%s session_id=%s", user_id, session_id)
+            raise
         finally:
             db.close()
 
@@ -185,10 +193,11 @@ class ConversationStorage:
                 )
             cache.set_json(self._sessions_cache_key(user_id), result)
             return result
+        except Exception:
+            logger.exception("Failed to list sessions user_id=%s", user_id)
+            return []
         finally:
             db.close()
-
-    # 获取原始消息记录
     def get_session_messages(self, user_id: str, session_id: str) -> list[dict]:
         from app.cache import cache
         from app.database import SessionLocal
@@ -231,10 +240,11 @@ class ConversationStorage:
             ]
             cache.set_json(self._messages_cache_key(user_id, session_id), result)
             return result
+        except Exception:
+            logger.exception("Failed to get session messages user_id=%s session_id=%s", user_id, session_id)
+            return []
         finally:
             db.close()
-
-    # 删除会话
     def delete_session(self, user_id: str, session_id: str) -> bool:
         from app.cache import cache
         from app.database import SessionLocal
@@ -259,6 +269,9 @@ class ConversationStorage:
             cache.delete(self._messages_cache_key(user_id, session_id))
             cache.delete(self._sessions_cache_key(user_id))
             return True
+        except Exception:
+            logger.exception("Failed to delete session user_id=%s session_id=%s", user_id, session_id)
+            return False
         finally:
             db.close()
 

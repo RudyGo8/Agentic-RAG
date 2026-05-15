@@ -6,6 +6,10 @@
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import PyPDFLoader, Docx2txtLoader, UnstructuredExcelLoader
 
+from app.utils.log import get_logger
+
+logger = get_logger(__name__)
+
 
 class DocumentLoader:
     def __init__(self, chunk_size: int = 500, chunk_overlap: int = 50):
@@ -77,6 +81,7 @@ class DocumentLoader:
                     })
             return documents
         except Exception as e:
+            logger.exception("Document load failed file=%s", filename)
             raise Exception(f"处理文档失败: {str(e)}")
 
 

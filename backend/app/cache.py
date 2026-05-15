@@ -1,9 +1,14 @@
 import json
-import redis
-from dotenv import load_dotenv
 import os
 
+import redis
+from dotenv import load_dotenv
+
+from app.utils.log import get_logger
+
 load_dotenv()
+
+logger = get_logger(__name__)
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 REDIS_KEY_PREFIX = os.getenv("REDIS_KEY_PREFIX", "rag_agent")
@@ -13,6 +18,7 @@ try:
     redis_client = redis.from_url(REDIS_URL, decode_responses=True)
     redis_client.ping()
 except Exception:
+    logger.warning("redis_unavailable url=%s", REDIS_URL)
     redis_client = None
 
 
@@ -31,6 +37,7 @@ class Cache:
         try:
             return self.client.get(self._key(key))
         except Exception:
+            logger.warning("redis_get_failed key=%s", key)
             return None
 
     def get_json(self, key: str) -> any:
@@ -42,6 +49,7 @@ class Cache:
                 return None
             return json.loads(val)
         except Exception:
+            logger.warning("redis_get_json_failed key=%s", key)
             return None
 
     def set(self, key: str, value: str, ttl: int = None):
@@ -50,7 +58,7 @@ class Cache:
         try:
             self.client.setex(self._key(key), ttl or self.ttl, value)
         except Exception:
-            pass
+            logger.warning("redis_set_failed key=%s", key)
 
     def set_json(self, key: str, value: any, ttl: int = None):
         if not self.client:
@@ -58,7 +66,7 @@ class Cache:
         try:
             self.client.setex(self._key(key), ttl or self.ttl, json.dumps(value, ensure_ascii=False))
         except Exception:
-            pass
+            logger.warning("redis_set_json_failed key=%s", key)
 
     def delete(self, key: str):
         if not self.client:
@@ -66,7 +74,7 @@ class Cache:
         try:
             self.client.delete(self._key(key))
         except Exception:
-            pass
+            logger.warning("redis_delete_failed key=%s", key)
 
     def exists(self, key: str) -> bool:
         if not self.client:
@@ -74,6 +82,7 @@ class Cache:
         try:
             return bool(self.client.exists(self._key(key)))
         except Exception:
+            logger.warning("redis_exists_failed key=%s", key)
             return False
 
 

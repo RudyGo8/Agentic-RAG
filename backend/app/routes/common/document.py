@@ -13,7 +13,10 @@ from app.schemas.auth import (
     DocumentUploadResult,
 )
 from app.utils.auth_utils import require_admin
+from app.utils.log import get_logger
 from app.utils.milvus_service import milvus_service
+
+logger = get_logger(__name__)
 
 router_r1 = APIRouter(
     prefix="/api/r1/documents",
@@ -67,6 +70,7 @@ async def list_documents(_: User = Depends(require_admin)):
         documents = [DocumentInfo(**stats) for stats in file_stats.values()]
         return DocumentListResponse(documents=documents)
     except Exception as e:
+        logger.exception("Failed to load document list")
         raise HTTPException(status_code=500, detail=f"Failed to load document list: {str(e)}")
 
 # 上传接口
@@ -88,6 +92,7 @@ async def upload_document(file: UploadFile = File(...), _: User = Depends(requir
             message=f"Uploaded {filename}, processed {chunk_count} chunks",
         )
     except Exception as e:
+        logger.exception("Document upload failed: %s", filename)
         raise HTTPException(status_code=500, detail=f"Document upload failed: {str(e)}")
 
 
@@ -124,6 +129,7 @@ async def batch_upload_document(files: list[UploadFile] = File(...), _: User = D
                 message=str(e.detail),
             ))
         except Exception as e:
+            logger.exception("Batch upload failed for: %s", filename)
             results.append(DocumentUploadResult(
                 filename=filename,
                 success=False,
@@ -158,4 +164,5 @@ async def delete_document(filename: str, _: User = Depends(require_admin)):
     except HTTPException:
         raise
     except Exception as e:
+        logger.exception("Document delete failed: %s", filename)
         raise HTTPException(status_code=500, detail=f"Document delete failed: {str(e)}")

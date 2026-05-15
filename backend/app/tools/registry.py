@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import Callable
+
 from app.tools.rag_tools import search_knowledge_base
 from app.tools.weather_tools import get_current_weather
 

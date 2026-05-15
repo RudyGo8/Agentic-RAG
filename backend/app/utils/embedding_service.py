@@ -9,7 +9,11 @@ import math
 import threading
 import requests
 from collections import Counter
+
 from app.config import BASE_URL, EMBEDDER, ARK_API_KEY, EMBEDDING_DIM
+from app.utils.log import get_logger
+
+logger = get_logger(__name__)
 
 
 class EmbeddingService:
@@ -47,7 +51,7 @@ class EmbeddingService:
                 batch = texts[start:start + self.batch_size]
                 data = {
                     "model": self.embedder,
-                    "inputs": batch,
+                    "input": batch,
                     "dimensions": self.embedding_dim
                 }
                 response = requests.post(url, headers=headers, json=data, timeout=60)
@@ -62,7 +66,8 @@ class EmbeddingService:
                 embeddings.extend(item["embedding"] for item in result.get("data", []))
             return embeddings
         except Exception as e:
-            raise Exception(f"嵌入 API 调用失败: {str(e)}")
+            logger.exception("Embedding API call failed batch_size=%d", len(texts))
+            raise
 
     def get_embedding(self, text: str) -> list[float]:
         embeddings = self.get_embeddings([text])

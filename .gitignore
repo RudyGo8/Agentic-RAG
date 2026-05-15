@@ -1,9 +1,22 @@
 # backend runtime data
-/backend/volumes/
-/backend/volumes/**
+volumes/
+backend/volumes/
+**/volumes/
+**/volumes/**
 /backend/.idea/
+
+**/mysql/
+**/performance_schema/
+**/performance_schema/**
 *.iml
 
+# 忽略所有 InnoDB 临时文件
+*.ibd
+*.ib_logfile
+#ib_*
+#ib_redo*
+ibdata*
+ib_logfile*
 # uploaded documents or local test files
 /backend/data/documents/
 /backend/data/documents/**
