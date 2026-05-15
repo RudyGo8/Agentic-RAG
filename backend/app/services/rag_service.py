@@ -6,7 +6,8 @@
 from app.utils.embedding_service import embedding_service
 from app.utils.milvus_service import milvus_service
 from app.utils.document_loader import document_loader
-from app.config import logger
+from app.utils.log import get_logger
+logger = get_logger(__name__)
 
 
 class RagService:
@@ -53,13 +54,13 @@ class RagService:
             sparse_embedding = self.embedding_service.get_sparse_embedding(query)
             results = self.milvus_service.hybrid_search(dense_embedding, sparse_embedding, top_k)
             return results
-        except Exception as e:
-            logger.error(f"RAG检索失败: {str(e)}")
+        except Exception:
+            logger.exception("Hybrid search failed, falling back to dense")
             try:
                 dense_embedding = self.embedding_service.get_embedding(query)
                 return self.milvus_service.dense_search(dense_embedding, top_k)
-            except Exception as e2:
-                logger.error(f"降级检索也失败: {str(e2)}")
+            except Exception:
+                logger.exception("Dense fallback also failed")
                 return []
 
     def format_context(self, docs: list[dict]) -> str:

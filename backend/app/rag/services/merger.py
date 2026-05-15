@@ -1,6 +1,8 @@
 from collections import Counter
 
-from app.config import AUTO_MERGE_ENABLED, AUTO_MERGE_THRESHOLD, LEAF_RETRIEVE_LEVEL, logger
+from app.config import AUTO_MERGE_ENABLED, AUTO_MERGE_THRESHOLD, LEAF_RETRIEVE_LEVEL
+from app.utils.log import get_logger
+logger = get_logger(__name__)
 
 
 # 将配置中的字符串“true”、“false“ 转换为布尔值

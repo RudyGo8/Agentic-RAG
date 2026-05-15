@@ -3,12 +3,16 @@
 @Author: GeChao
 @File: main.py
 """
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from contextlib import asynccontextmanager
-from app.config import logger
 from app.database import init_db
+from app.utils.log import get_logger, setup_logging
+
+setup_logging()
+logger = get_logger(__name__)
+
 from app.mcp.client_manager import mcp_client_manager
 from app.routes.common.auth import router_r1 as auth_router_r1
 from app.routes.common.chat import router_r1 as chat_router_r1
@@ -16,11 +20,9 @@ from app.routes.common.document import router_r1 as document_router_r1
 from app.routes.common.version import router_r1 as version_router_r1
 from app.version import get_app_version
 
-
 # # 前端dist
 # FRONTEND_DIR = Path(__file__).resolve().parents[2] / "frontend"
 # FRONTEND_DIST_DIR = FRONTEND_DIR / "dist"
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -29,9 +31,8 @@ async def lifespan(app: FastAPI):
     await mcp_client_manager.initialize()
     yield
 
-
 app = FastAPI(
-    title="ZhiYuan Agentic API",
+    title="TraceAgentic",
     version=get_app_version(),
     description=__doc__,
     lifespan=lifespan
@@ -69,4 +70,4 @@ app.include_router(version_router_r1)
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000, log_config={"version": 1, "disable_existing_loggers": False})

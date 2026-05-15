@@ -1,7 +1,8 @@
 import json
 import re
 
-from app.config import logger
+from app.utils.log import get_logger
+logger = get_logger(__name__)
 from app.rag.models import _get_default_model
 
 

@@ -4,14 +4,14 @@ from langchain_core.messages import AIMessage, AIMessageChunk, HumanMessage
 from app.agent.context import prepare_messages
 from app.agent.factory import get_recursion_limit, create_agent_instance
 from app.agent.trace import collect_rag_trace, extract_usage_from_message
-from app.config import logger
-from app.mcp import mcp_client_manager
+from app.utils.log import get_logger
+from app.tools.gateway import tool_gateway
 from app.mcp.trace import reset_mcp_trace
 from app.services.conversation_service import conversation_service as storage
 from app.tools.runtime import get_last_rag_context, reset_tool_call_guards, set_rag_step_queue
-from app.tools.registry import TOOL_REGISTRY
 
 
+logger = get_logger(__name__)
 def _extract_tool_name(chunk) -> str | None:
     if isinstance(chunk, dict):
         name = chunk.get("name")
@@ -50,16 +50,8 @@ async def chat_with_agent_stream(user_text: str, user_id: str = "default_user", 
     messages = prepare_messages(messages)
 
 
-    # Agent 的工具集合 = 本地工具 + 可选 MCP 工具。
-    # mcp先不维护
-    local_tools = [spec.tool for spec in TOOL_REGISTRY.values()]
-    mcp_tools = await mcp_client_manager.get_agent_tools()
-    mcp_tool_names = {
-        str(getattr(tool, "name", "")).strip()
-        for tool in mcp_tools
-        if getattr(tool, "name", None)
-    }
-    candidate_tools = local_tools + mcp_tools
+    candidate_tools = await tool_gateway.get_tools()
+    mcp_tool_names = await tool_gateway.get_mcp_tool_names()
 
 
 
@@ -170,11 +162,11 @@ async def chat_with_agent_stream(user_text: str, user_id: str = "default_user", 
     tool_name = rag_trace.get("tool_name") if isinstance(rag_trace, dict) else None
 
     logger.info(
-        "stream_chat_trace user_id=%s session_id=%s tool_used=%s tool_name=%s",
-        user_id,
-        session_id,
-        tool_used,
-        tool_name or "none",
+        "stream_chat_trace",
+        user_id=user_id,
+        session_id=session_id,
+        tool_used=tool_used,
+        tool_name=tool_name or "none",
     )
 
     if rag_trace:

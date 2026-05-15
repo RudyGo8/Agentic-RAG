@@ -1,6 +1,6 @@
 [project]
-name = "2-rag-agent"
-version = "0.1.0"
+name = "TraceAgentic_RAG"
+version = "0.2.1"
 requires-python = ">=3.11"
 dependencies = [
     "docx2txt>=0.0.0",
@@ -28,6 +28,7 @@ dependencies = [
     "requests>=0.0.0",
     "rich>=0.0.0",
     "sqlalchemy>=2.0.36",
+    "structlog>=25.5.0",
     "tabulate>=0.0.0",
     "unstructured>=0.0.0",
     "uvicorn>=0.30.0",
