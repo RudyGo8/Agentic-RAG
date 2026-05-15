@@ -22,6 +22,8 @@
 
     <div class="message-content" v-html="renderedContent"></div>
 
+    <ChartDisplay v-if="!message.isUser && hasChartJson" :content="message.text" />
+
     <div v-if="!message.isUser && message.ragTrace" class="message-meta">
       <button class="trace-btn" @click="toggleTrace">
         检索过程
@@ -72,9 +74,11 @@
 </template>
 
 <script>
-import { escapeHtml, renderMarkdown } from '../../services/markdown';
+import { escapeHtml, renderMarkdown } from '../../services/markdown'
+import ChartDisplay from './ChartDisplay.vue'
 
 export default {
+  components: { ChartDisplay },
   props: {
     message: {
       type: Object,
@@ -85,13 +89,28 @@ export default {
     showThinking() {
       return !this.message.isUser && this.message.isThinking && !this.message.text;
     },
+    hasChartJson() {
+      try {
+        let t = this.message.text || ''
+        // 先试从 markdown code block 里提取
+        const code = t.match(/```(?:json)?\s*([\s\S]*?)```/)
+        if (code) t = code[1]
+        const m = t.match(/\{[\s\S]*"chart"[\s\S]*\}/)
+        if (!m) return false
+        const p = JSON.parse(m[0])
+        return !!(p.chart && p.data)
+      } catch { return false }
+    },
     showTraceLines() {
       return !this.message.isUser
         && Array.isArray(this.message.ragSteps)
         && this.message.ragSteps.length > 0;
     },
     renderedContent() {
-      return this.message.isUser ? escapeHtml(this.message.text) : renderMarkdown(this.message.text);
+      if (this.message.isUser) return escapeHtml(this.message.text)
+      // bot 消息：摘掉 chart JSON 块，只显示分析文本
+      let text = (this.message.text || '').replace(/\{[\s\S]*"chart"[\s\S]*\}/, '').trim()
+      return renderMarkdown(text)
     },
     chunksToRender() {
       const trace = this.message.ragTrace || {};

@@ -43,4 +43,5 @@ node_modules/
 # local agent/codex
 .codex/
 .agents/
+.claude/
 AGENTS.md

@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "dompurify": "^3.1.6",
+    "echarts": "^6.0.0",
     "element-plus": "^2.11.4",
     "highlight.js": "^11.11.1",
     "marked": "^16.4.0",
