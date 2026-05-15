@@ -9,7 +9,6 @@ from langchain_community.document_loaders import PyPDFLoader, Docx2txtLoader, Un
 
 class DocumentLoader:
     def __init__(self, chunk_size: int = 500, chunk_overlap: int = 50):
-        # 递归分块 + 语义检索
         self._splitter = RecursiveCharacterTextSplitter(
             chunk_size=chunk_size,
             chunk_overlap=chunk_overlap,

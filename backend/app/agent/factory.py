@@ -1,7 +1,11 @@
 import os
+
 from dotenv import load_dotenv
 from langchain.agents import create_agent
 from langchain.chat_models import init_chat_model
+
+from app.tools.rag_tools import search_knowledge_base
+from app.tools.weather_tools import get_current_weather
 
 load_dotenv()
 
@@ -12,6 +16,7 @@ AGENT_RECURSION_LIMIT = max(8, int(os.getenv("AGENT_RECURSION_LIMIT", "16")))
 
 
 def create_agent_instance(tools: list | None = None):
+
     if not tools:
         raise ValueError("必须传入非空 tools 列表")
     model = init_chat_model(
@@ -56,15 +61,15 @@ def create_agent_instance(tools: list | None = None):
             "15. 回答要简洁、准确、可追溯。"
             "16. 不确定时要明确说明不确定，不要编造。"
         )
-    )
+    ),
     return agent, model
 
-# # 单例模式
-# agent, model = create_agent_instance()
-#
-#
-# def get_model():
-#     return model
+# 单例模式
+agent, model = create_agent_instance()
+
+
+def get_model():
+    return model
 
 
 # agent 最大递归次数

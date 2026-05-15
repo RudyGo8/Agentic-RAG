@@ -6,9 +6,7 @@ import traceback
 from pathlib import Path
 from typing import Any
 
-import structlog
-from app.config import MCP_ENABLED, MCP_SERVERS_JSON
-logger = structlog.get_logger(__name__)
+from app.config import MCP_ENABLED, MCP_SERVERS_JSON, logger
 
 _MCP_IMPORT_ERROR: str | None = None
 

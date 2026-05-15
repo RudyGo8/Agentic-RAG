@@ -6,8 +6,7 @@
 from app.utils.embedding_service import embedding_service
 from app.utils.milvus_service import milvus_service
 from app.utils.document_loader import document_loader
-import structlog
-logger = structlog.get_logger(__name__)
+from app.config import logger
 
 
 class RagService:

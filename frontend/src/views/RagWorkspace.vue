@@ -29,7 +29,6 @@
         :selected-files="selectedFiles"
         :uploading="isUploading"
         :upload-progress="uploadProgress"
-        :upload-percent="uploadPercent"
         @select-files="handleFileSelect"
         @upload-files="uploadDocument"
         @refresh="loadDocuments"

@@ -1,8 +1,6 @@
 from collections import Counter
 
-import structlog
-from app.config import AUTO_MERGE_ENABLED, AUTO_MERGE_THRESHOLD, LEAF_RETRIEVE_LEVEL
-logger = structlog.get_logger(__name__)
+from app.config import AUTO_MERGE_ENABLED, AUTO_MERGE_THRESHOLD, LEAF_RETRIEVE_LEVEL, logger
 
 
 # 将配置中的字符串“true”、“false“ 转换为布尔值

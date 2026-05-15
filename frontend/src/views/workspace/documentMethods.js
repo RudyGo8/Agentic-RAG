@@ -5,7 +5,6 @@ export const documentMethods = {
   handleFileSelect(files) {
     this.selectedFiles = Array.isArray(files) ? files : [];
     this.uploadProgress = '';
-    this.uploadPercent = 0;
   },
   async loadDocuments() {
     this.documentsLoading = true;
@@ -24,30 +23,19 @@ export const documentMethods = {
     }
 
     this.isUploading = true;
-    this.uploadPercent = 0;
     this.uploadProgress = '正在上传...';
 
     try {
-      const data = await uploadDocumentFiles(
-        this.api,
-        this.token,
-        this.selectedFiles,
-        (percent) => {
-          this.uploadPercent = percent;
-          this.uploadProgress = `正在上传... ${percent}%`;
-        }
-      );
+      const data = await uploadDocumentFiles(this.api, this.token, this.selectedFiles);
       this.uploadProgress = buildUploadProgressMessage(data);
       this.selectedFiles = [];
       await this.loadDocuments();
 
       setTimeout(() => {
         this.uploadProgress = '';
-        this.uploadPercent = 0;
       }, 3000);
     } catch (error) {
       this.uploadProgress = `上传失败：${this.handleServiceError(error)}`;
-      this.uploadPercent = 0;
     } finally {
       this.isUploading = false;
     }
