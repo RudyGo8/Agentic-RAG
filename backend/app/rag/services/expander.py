@@ -1,7 +1,8 @@
 import json
 import re
 
-from app.config import logger
+import structlog
+logger = structlog.get_logger(__name__)
 from app.rag.models import _get_default_model
 
 

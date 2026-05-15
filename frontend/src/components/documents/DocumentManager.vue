@@ -36,7 +36,13 @@
           </button>
         </div>
         <div v-if="uploadProgress" class="upload-progress">
-          {{ uploadProgress }}
+          <el-progress
+            v-if="uploadPercent > 0"
+            :percentage="uploadPercent"
+            :stroke-width="8"
+            :show-text="true"
+          />
+          <span class="upload-progress-text">{{ uploadProgress }}</span>
         </div>
       </div>
     </div>
@@ -101,6 +107,10 @@ export default {
     uploadProgress: {
       type: String,
       default: ''
+    },
+    uploadPercent: {
+      type: Number,
+      default: 0
     }
   },
   emits: ['select-files', 'upload-files', 'refresh', 'delete-document'],

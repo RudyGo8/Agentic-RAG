@@ -4,7 +4,8 @@ from langchain_core.messages import AIMessage, AIMessageChunk, HumanMessage
 from app.agent.context import prepare_messages
 from app.agent.factory import get_recursion_limit, create_agent_instance
 from app.agent.trace import collect_rag_trace, extract_usage_from_message
-from app.config import logger
+import structlog
+logger = structlog.get_logger(__name__)
 from app.mcp import mcp_client_manager
 from app.mcp.trace import reset_mcp_trace
 from app.services.conversation_service import conversation_service as storage
@@ -60,9 +61,6 @@ async def chat_with_agent_stream(user_text: str, user_id: str = "default_user", 
         if getattr(tool, "name", None)
     }
     candidate_tools = local_tools + mcp_tools
-
-
-
     agent, _ = create_agent_instance(tools=candidate_tools)
 
     # 异步队列

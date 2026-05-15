@@ -3,12 +3,18 @@
 @Author: GeChao
 @File: main.py
 """
+from contextlib import asynccontextmanager
+
+import structlog
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from contextlib import asynccontextmanager
-from app.config import logger
+
 from app.database import init_db
+from app.utils.log import setup_logging
+
+setup_logging()
+logger = structlog.get_logger(__name__)
 from app.mcp.client_manager import mcp_client_manager
 from app.routes.common.auth import router_r1 as auth_router_r1
 from app.routes.common.chat import router_r1 as chat_router_r1
@@ -24,7 +30,6 @@ from app.version import get_app_version
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 启动阶段预热数据库和 MCP 客户端，避免首个请求承担初始化开销。
     init_db()
     await mcp_client_manager.initialize()
     yield

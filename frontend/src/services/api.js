@@ -43,6 +43,7 @@ export function createApiService(baseUrl) {
 
   return {
     request,
-    requestJson
+    requestJson,
+    baseUrl: normalizedBaseUrl
   };
 }

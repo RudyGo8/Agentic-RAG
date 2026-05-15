@@ -159,6 +159,7 @@ def retrieve_expanded(state: RAGState) -> RAGState:
         auto_merge_replaced_chunks += int(step_meta.get("auto_merge_replaced_chunks") or 0)
         auto_merge_steps += int(step_meta.get("auto_merge_steps") or 0)
 
+    # 如果是complex 策略，则多路召回融合
     # 执行 RRF 融合并去重
     rrf_k = 60
     rrf_scores = {}

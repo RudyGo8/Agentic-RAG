@@ -534,6 +534,16 @@ textarea:focus {
   font-weight: 700;
 }
 
+.upload-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.upload-progress-text {
+  font-size: 13px;
+}
+
 .documents-list,
 .history-list {
   display: flex;

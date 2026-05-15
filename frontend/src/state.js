@@ -13,6 +13,7 @@ export function createInitialState(config) {
     selectedFiles: [],
     isUploading: false,
     uploadProgress: '',
+    uploadPercent: 0,
     token: localStorage.getItem(config.TOKEN_STORAGE_KEY) || '',
     currentUser: null,
     authMode: 'login',

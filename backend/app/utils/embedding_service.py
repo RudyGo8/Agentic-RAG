@@ -47,7 +47,7 @@ class EmbeddingService:
                 batch = texts[start:start + self.batch_size]
                 data = {
                     "model": self.embedder,
-                    "inputs": batch,
+                    "input": batch,
                     "dimensions": self.embedding_dim
                 }
                 response = requests.post(url, headers=headers, json=data, timeout=60)
