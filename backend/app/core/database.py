@@ -7,7 +7,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-from app.config import MYSQL_HOST, MYSQL_PORT, MYSQL_USERNAME, MYSQL_PASSWORD, MYSQL_DATABASE
+from app.core.config import MYSQL_HOST, MYSQL_PORT, MYSQL_USERNAME, MYSQL_PASSWORD, MYSQL_DATABASE
 from app.utils.log import get_logger
 
 import pymysql
@@ -39,10 +39,6 @@ def get_db():
 
 
 def init_db():
-    from app.models.db_user import User
-    from app.models.db_chat_session import ChatSession
-    from app.models.db_chat_message import ChatMessage
-    from app.models.db_parent_chunk import ParentChunk
     try:
         Base.metadata.create_all(bind=engine)
         logger.info("database_initialized")

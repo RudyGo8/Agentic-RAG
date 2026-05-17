@@ -1,7 +1,7 @@
 import asyncio
 from dotenv import load_dotenv
 from langchain_mcp_adapters.client import MultiServerMCPClient
-from app.mcp_gateway.mcp_config import MCPConfig
+from app.tools.mcp_gateway.mcp_config import MCPConfig
 from app.utils.log import get_logger
 
 load_dotenv()

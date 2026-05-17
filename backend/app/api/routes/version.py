@@ -5,7 +5,7 @@
 '''
 
 from fastapi import APIRouter
-from app.version import get_app_version
+from app.core.version import get_app_version
 
 router_r1 = APIRouter(
     prefix="/api/r1/version",

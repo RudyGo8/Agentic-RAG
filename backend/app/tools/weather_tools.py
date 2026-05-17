@@ -8,7 +8,7 @@ from typing import Optional
 import requests
 
 from dotenv import load_dotenv
-from app.tools.runtime import emit_rag_step
+from app.rag.runtime import emit_rag_step
 
 load_dotenv()
 

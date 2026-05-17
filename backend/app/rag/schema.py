@@ -21,7 +21,7 @@ class RewriteStrategy(BaseModel):
 
 
 class RetrieveResult(BaseModel):
-    """检索结果结构，后面拆 services 时用"""
+    """检索结果结构，后面拆 pipeline 时用"""
 
     docs: List[Dict[str, Any]] = []
     meta: Dict[str, Any] = {}

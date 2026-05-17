@@ -3,12 +3,12 @@ import json
 from langchain_core.messages import AIMessage, AIMessageChunk, HumanMessage
 from app.agent.context import prepare_messages
 from app.agent.factory import get_recursion_limit, create_agent_instance
-from app.agent.trace import collect_rag_trace, extract_usage_from_message
+from app.tracing.agent_trace import collect_rag_trace, extract_usage_from_message
 from app.utils.log import get_logger
 from app.tools.gateway import tool_gateway
-from app.mcp_gateway.trace import reset_mcp_trace
+from app.tracing.mcp_trace import reset_mcp_trace
 from app.services.conversation_service import conversation_service as storage
-from app.tools.runtime import get_last_rag_context, reset_tool_call_guards, set_rag_step_queue
+from app.rag.runtime import get_last_rag_context, reset_tool_call_guards, set_rag_step_queue
 
 
 logger = get_logger(__name__)

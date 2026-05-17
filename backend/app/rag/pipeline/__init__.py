@@ -3,8 +3,8 @@
 @Author: GeChao
 @File: __init__.py.py
 '''
-from app.rag.services.retrieve_service import retrieve_documents
-from app.rag.services.expander import (
+from app.rag.pipeline.retrieve_service import retrieve_documents
+from app.rag.pipeline.expander import (
  step_back_expand,
  generate_hypothetical_document
 )

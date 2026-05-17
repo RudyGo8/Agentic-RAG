@@ -1,20 +1,11 @@
-import os
-
-from dotenv import load_dotenv
 from langchain.agents import create_agent
 from langchain.chat_models import init_chat_model
-
-load_dotenv()
-
-API_KEY = os.getenv("ARK_API_KEY")
-MODEL = os.getenv("MODEL")
-BASE_URL = os.getenv("BASE_URL")
-AGENT_RECURSION_LIMIT = max(8, int(os.getenv("AGENT_RECURSION_LIMIT", "16")))
+from app.core.config import AGENT_RECURSION_LIMIT, ARK_API_KEY, BASE_URL, MODEL
 
 _model = init_chat_model(
       model=MODEL,
       model_provider="openai",
-      api_key=API_KEY,
+      api_key=ARK_API_KEY,
       base_url=BASE_URL,
       temperature=0.3,
       stream_usage=True,

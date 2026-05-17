@@ -6,9 +6,9 @@
 from typing import List
 
 from app.rag.formatter import format_docs
-from app.rag.services import retrieve_documents, generate_hypothetical_document
+from app.rag.pipeline import retrieve_documents, generate_hypothetical_document
 from app.rag.state import RAGState
-from app.tools.runtime import emit_rag_step
+from app.rag.runtime import emit_rag_step
 
 
 # 初始检索

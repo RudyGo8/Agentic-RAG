@@ -1,20 +1,20 @@
 '''
 @create_time: 2025/12/28
 @Author: GeChao
-@File: auth_utils.py
+@File: security.py
 '''
-import os
 import base64
 import hashlib
 import hmac
+import os
 from datetime import datetime, timedelta, timezone
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
-from app.database import get_db
+from app.core.database import get_db
 from app.models.db_user import User
-from app.config import JWT_SECRET_KEY, JWT_ALGORITHM, JWT_EXPIRE_MINUTES, ADMIN_INVITE_CODE, PASSWORD_PBKDF2_ROUNDS
+from app.core.config import JWT_SECRET_KEY, JWT_ALGORITHM, JWT_EXPIRE_MINUTES, ADMIN_INVITE_CODE, PASSWORD_PBKDF2_ROUNDS
 
 # 从请求头 Authorization: Bearer <token> 取 token
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/r1/auth/login")

@@ -3,9 +3,9 @@
 @Author: GeChao
 @File: retrieve_service.py
 '''
-from app.rag.services.vector_retriever import vector_retrieve
-from app.rag.services.reranker import rerank_documents
-from app.rag.services.merger import auto_merge_chunks
+from app.rag.pipeline.vector_retriever import vector_retrieve
+from app.rag.pipeline.reranker import rerank_documents
+from app.rag.pipeline.merger import auto_merge_chunks
 from app.utils.doc_normalizer import normalize_docs
 
 # 文档检索

@@ -15,7 +15,7 @@ from app.schemas.auth import (
     SessionMessagesResponse,
 )
 from app.services.chat_service import chat_service
-from app.utils.auth_utils import get_current_user
+from app.core.security import get_current_user
 from fastapi.responses import StreamingResponse
 
 router_r1 = APIRouter(

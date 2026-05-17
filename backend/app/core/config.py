@@ -40,3 +40,5 @@ ADMIN_INVITE_CODE = os.getenv("ADMIN_INVITE_CODE", "")
 PASSWORD_PBKDF2_ROUNDS = int(os.getenv("PASSWORD_PBKDF2_ROUNDS", "310000"))
 
 MCP_ENABLED = os.getenv("MCP_ENABLED", "false").lower() == "true"
+
+AGENT_RECURSION_LIMIT = max(8, int(os.getenv("AGENT_RECURSION_LIMIT", "16")))

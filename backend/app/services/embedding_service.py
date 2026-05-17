@@ -10,7 +10,7 @@ import threading
 import requests
 from collections import Counter
 
-from app.config import BASE_URL, EMBEDDER, ARK_API_KEY, EMBEDDING_DIM
+from app.core.config import BASE_URL, EMBEDDER, ARK_API_KEY, EMBEDDING_DIM
 from app.utils.log import get_logger
 
 logger = get_logger(__name__)

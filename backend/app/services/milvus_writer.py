@@ -1,7 +1,7 @@
-from app.utils.embedding_service import embedding_service
-from app.utils.milvus_service import milvus_service
-from app.utils.document_loader import document_loader
-from app.utils.parent_chunk_store import parent_chunk_store
+from app.services.embedding_service import embedding_service
+from app.services.milvus_service import milvus_service
+from app.services.document_loader import document_loader
+from app.services.parent_chunk_store import parent_chunk_store
 from app.utils.log import get_logger
 logger = get_logger(__name__)
 

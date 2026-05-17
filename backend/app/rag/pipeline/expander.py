@@ -3,7 +3,7 @@ import re
 
 from app.utils.log import get_logger
 logger = get_logger(__name__)
-from app.rag.models import _get_default_model
+from app.rag.llm import _get_default_model
 
 
 def step_back_expand(query: str) -> dict:

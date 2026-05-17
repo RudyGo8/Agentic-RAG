@@ -4,7 +4,7 @@
 @File: milvus_service.py
 '''
 from pymilvus import MilvusClient, DataType, AnnSearchRequest, RRFRanker
-from app.config import EMBEDDING_DIM, MILVUS_HOST, MILVUS_PORT, MILVUS_COLLECTION
+from app.core.config import EMBEDDING_DIM, MILVUS_HOST, MILVUS_PORT, MILVUS_COLLECTION
 from app.utils.log import get_logger
 
 logger = get_logger(__name__)

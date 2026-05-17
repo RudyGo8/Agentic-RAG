@@ -3,8 +3,8 @@
 @Author: GeChao
 @File: vector_retriever.py
 '''
-from app.utils.embedding_service import embedding_service
-from app.utils.milvus_service import milvus_service
+from app.services.embedding_service import embedding_service
+from app.services.milvus_service import milvus_service
 
 # 向量检索
 def vector_retrieve(query: str, top_k: int = 5) -> tuple[list[dict], dict]:

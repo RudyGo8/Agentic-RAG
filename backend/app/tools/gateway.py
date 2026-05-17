@@ -1,4 +1,4 @@
-from app.mcp_gateway.client_manager import mcp_client_manager
+from app.tools.mcp_gateway.client_manager import mcp_client_manager
 from app.tools.registry import TOOL_REGISTRY
 
 

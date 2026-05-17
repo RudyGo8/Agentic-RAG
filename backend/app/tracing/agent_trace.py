@@ -1,13 +1,6 @@
-import os
-
-from dotenv import load_dotenv
-
-from app.mcp_gateway.trace import get_mcp_trace
-from app.tools.runtime import get_last_rag_context
-
-load_dotenv()
-
-MODEL = os.getenv("MODEL")
+from app.core.config import MODEL
+from app.tracing.mcp_trace import get_mcp_trace
+from app.rag.runtime import get_last_rag_context
 
 
 # token 用量汇总

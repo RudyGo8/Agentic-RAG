@@ -4,7 +4,7 @@
 @File: db_parent_chunk.py
 '''
 from sqlalchemy import Column, Integer, String, Text, DateTime, JSON, func
-from app.database import Base
+from app.core.database import Base
 
 
 class ParentChunk(Base):

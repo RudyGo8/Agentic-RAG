@@ -7,7 +7,7 @@
 from langchain_core.tools import tool
 
 from app.rag.formatter import format_docs
-from app.tools.runtime import (
+from app.rag.runtime import (
     get_knowledge_tool_call_this_turn,
     increase_knowledge_tool_calls_this_turn,
     set_last_rag_context)

@@ -1,18 +1,11 @@
 import json
-import os
 
 import redis
-from dotenv import load_dotenv
 
+from app.core.config import REDIS_CACHE_TTL_SECONDS, REDIS_KEY_PREFIX, REDIS_URL
 from app.utils.log import get_logger
 
-load_dotenv()
-
 logger = get_logger(__name__)
-
-REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-REDIS_KEY_PREFIX = os.getenv("REDIS_KEY_PREFIX", "rag_agent")
-REDIS_CACHE_TTL_SECONDS = int(os.getenv("REDIS_CACHE_TTL_SECONDS", "300"))
 
 try:
     redis_client = redis.from_url(REDIS_URL, decode_responses=True)

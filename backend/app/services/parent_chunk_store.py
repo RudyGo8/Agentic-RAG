@@ -1,6 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, JSON
-from app.database import Base
-from app.cache import cache
+from app.core.cache import cache
 
 
 # 父级分块存储器
@@ -16,7 +14,7 @@ class ParentChunkStore:
             return cached
         
         from app.models.db_parent_chunk import ParentChunk
-        from app.database import SessionLocal
+        from app.core.database import SessionLocal
         
         db = SessionLocal()
         try:
@@ -36,7 +34,7 @@ class ParentChunkStore:
     
     def save_chunk(self, chunk_id: str, text: str, metadata: dict = None):
         from app.models.db_parent_chunk import ParentChunk
-        from app.database import SessionLocal
+        from app.core.database import SessionLocal
 
         metadata = metadata or {}
         filename = (metadata.get("filename") or "").strip() or "unknown"
@@ -85,7 +83,7 @@ class ParentChunkStore:
     
     def delete_chunk(self, chunk_id: str):
         from app.models.db_parent_chunk import ParentChunk
-        from app.database import SessionLocal
+        from app.core.database import SessionLocal
         
         db = SessionLocal()
         try:
