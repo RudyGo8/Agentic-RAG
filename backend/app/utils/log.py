@@ -9,6 +9,7 @@ from pathlib import Path
 
 _TS_RE = re.compile(r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}')
 _ANSI_RE = re.compile(r'\x1b\[[0-9;]*m')
+_LOGGING_CONFIGURED = False
 
 
 class _StructlogFormatter(logging.Formatter):
@@ -33,6 +34,10 @@ class StripAnsiFormatter(_StructlogFormatter):
 
 
 def setup_logging() -> None:
+    global _LOGGING_CONFIGURED
+    if _LOGGING_CONFIGURED:
+        return
+
     log_level = os.getenv("LOG_LEVEL", "INFO").upper()
     env = os.getenv("ENV", "development").lower()
     log_dir = os.getenv(
@@ -116,6 +121,7 @@ def setup_logging() -> None:
         env=env,
         log_dir=str(log_dir) if Path(log_dir).exists() else None,
     )
+    _LOGGING_CONFIGURED = True
 
 
 def get_logger(name: str | None = None):

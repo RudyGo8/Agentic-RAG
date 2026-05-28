@@ -53,11 +53,9 @@ async def chat_with_agent_stream(user_text: str, user_id: str = "default_user", 
     candidate_tools = await tool_gateway.get_tools()
     mcp_tool_names = await tool_gateway.get_mcp_tool_names()
 
-
-
     agent, _ = create_agent_instance(tools=candidate_tools)
 
-    # 异步队列
+    # 创建异步队列，统一收集发给前端的事件
     output_queue = asyncio.Queue()
     trace_state = {
         "rag_step_count": 0,

@@ -40,6 +40,10 @@ def get_db():
 
 def init_db():
     try:
+        # Import all models before metadata initialization so SQLAlchemy can
+        # resolve relationship() string targets consistently.
+        import app.models  # noqa: F401
+
         Base.metadata.create_all(bind=engine)
         logger.info("database_initialized")
     except Exception:

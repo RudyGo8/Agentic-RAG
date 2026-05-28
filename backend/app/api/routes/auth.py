@@ -5,10 +5,16 @@
 '''
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+
 from app.core.database import get_db
 from app.models.db_user import User
 from app.schemas.auth import RegisterRequest, LoginRequest, AuthResponse, CurrentUserResponse
 from app.core.security import authenticate_user, create_access_token, get_current_user, get_password_hash, resolve_role
+from app.utils.log import get_logger
+
+logger = get_logger(__name__)
+
+
 
 router_r1 = APIRouter(
     prefix="/api/r1/auth",
@@ -39,6 +45,7 @@ async def register(request: RegisterRequest, db: Session = Depends(get_db)):
 @router_r1.post("/login", response_model=AuthResponse)
 async def login(request: LoginRequest, db: Session = Depends(get_db)):
     user = authenticate_user(db, request.username, request.password)
+    # logger.info("用户登录")
     if not user:
         raise HTTPException(status_code=401, detail="用户名或密码错误")
     token = create_access_token(username=user.username, role=user.role)

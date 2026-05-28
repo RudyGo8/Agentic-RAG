@@ -48,7 +48,7 @@ class MilvusService:
 
             # 创建索引参数
             index_params = client.prepare_index_params()
-            # dense索引： HNSW近似最近邻索引、内积相似度、图索引每个节点连数量16个、搜索宽度256
+            # dense索引： HNSW 近似最近邻搜索索引、内积相似度、图索引每个节点连数量16个、搜索宽度256
             index_params.add_index(field_name="dense_embedding", index_type="HNSW", metric_type="IP", params={"M": 16, "efConstruction": 256})
             # sparse索引：SPARSE_INVERTED_INDEX倒排索引、内积相似度、丢弃部分低权重项0.2
             index_params.add_index(field_name="sparse_embedding", index_type="SPARSE_INVERTED_INDEX", metric_type="IP", params={"drop_ratio_build": 0.2})

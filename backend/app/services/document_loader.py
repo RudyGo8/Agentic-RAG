@@ -53,6 +53,7 @@ class DocumentLoader:
                 page_text = (doc.page_content or "").strip()
                 if not page_text:
                     continue
+                # 文档村
                 page_number = doc.metadata.get("page", idx)
                 try:
                     page_number = int(page_number)
