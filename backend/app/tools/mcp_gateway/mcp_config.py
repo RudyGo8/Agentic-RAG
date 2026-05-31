@@ -24,6 +24,12 @@ class MCPConfig:
         self.config_path = os.path.join(os.path.dirname(__file__), "mcp_servers.json")
         self._config: Dict = {}
 
+    # 获取最后的修改时间
+    def get_mtime(self) -> float:
+        if not os.path.exists(self.config_path):
+            return 0.0
+        return os.path.getmtime(self.config_path)
+
     # 加载并解析 json配置
     def load(self) -> Dict[str, Any]:
         if not os.path.exists(self.config_path):

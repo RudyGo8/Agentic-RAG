@@ -20,5 +20,11 @@
       "MYSQL_DATABASE": "${MYSQL_MCP_DATABASE}",
       "ALLOW_WRITE_OPERATIONS": "false"
     }
-  }
+  },
+  "playwright": {
+  "enabled": true,
+  "transport": "stdio",
+  "command": "npx",
+  "args": ["-y", "@playwright/mcp@latest"]
+}
 }

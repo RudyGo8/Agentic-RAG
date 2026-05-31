@@ -3,6 +3,7 @@
 @Author: GeChao
 @File: main.py
 """
+import asyncio
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -27,8 +28,17 @@ from app.core.version import get_app_version
 async def lifespan(app: FastAPI):
     # 启动阶段预热数据库和 MCP 客户端，避免首个请求承担初始化开销。
     init_db()
+    # 后台监听mcp server，实现热插拔
     await mcp_client_manager.initialize()
-    yield
+    mcp_watch_task = asyncio.create_task(mcp_client_manager.watch_config_loop(interval_seconds=30))
+    try:
+        yield
+    finally:
+        mcp_watch_task.cancel()
+        try:
+            await mcp_watch_task
+        except asyncio.CancelledError:
+            pass
 
 app = FastAPI(
     title="TraceAgentic",
