@@ -36,6 +36,10 @@ __pycache__/
 *.log
 logs/
 
+# eval outputs
+/evals/.vendor/
+/evals/experiments/
+
 # frontend
 /frontend/node_modules/
 node_modules/
