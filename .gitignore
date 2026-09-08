@@ -43,6 +43,10 @@ logs/
 # frontend
 /frontend/node_modules/
 node_modules/
+dist/
+
+# ide
+.idea/
 
 # local agent/codex
 .codex/

@@ -1,6 +1,6 @@
 # TraceAgentic RAG —— 多步自主知识智能体
 
-基于多步推理的自主知识 Agent，能高精度检索知识库并跟踪溯源、能干活查数据库和Github并得到的订单表数据分析
+基于多步推理的自主知识 Agent，能高精度检索知识库并跟踪溯源、能干活查数据库和 Github 并得到的订单表数据分析
 
 > **解决痛点**：企业中智能体检索知识库时幻觉严重——单一检索命中率低、语义漂移导致答非所问、无决策追溯无法排查。本项目通过 **HyDE 假设文档扩展 + StepBack 反向抽象 + 多步 Agent 自主推理 + 全链路可观测**，从检索深度和召回广度两个维度压制幻觉。
 
@@ -10,39 +10,56 @@
 - 流式：SSE（`content` / `rag_step` / `trace` / `[DONE]`）
 - 工具调用：Function Tool（内置 RAG 检索）+ MCP（Git / MySQL，可按需扩展）
 
----
+## 项目结构
 
-## 更新日志
-### 2026-05-31 (v0.2.3)
+```text
+backend/
+├── app/
+│   ├── agent/          # Agent 运行器与上下文
+│   ├── api/routes/     # auth / chat / document 接口
+│   ├── rag/            # RAG 流水线（检索/评分/重写/扩展）
+│   ├── services/       # Milvus / 文档加载 / 会话等服务
+│   ├── tools/          # Function Tool + MCP 网关
+│   └── tracing/        # Agent / MCP 决策追踪
+└── .env.example        # 环境变量模板
+frontend/               # Vue 3 前端
+evals/                  # RAGAS 离线评测
+docker-compose.yml      # MySQL + Redis + Milvus 基础服务
+```
 
-- **MCP热插拔**：生命周期添加后台任务，监听mcp_json文件，有变动就初始化mcp服务，返回所有工具
-- **单服务隔离加载**：单个mcp服务挂了不影响全局mcp服务
+## 快速开始
 
-### 2026-05-15 (v0.2.2)
+```bash
+# 1. 启动基础服务（compose 文件在根目录）
+docker compose up -d
 
-- **数据分析助手**：prompt 新增【运营数据规则】 、SQL模版、时间解析表
-- **前端渲染**：ECharts图表展示
+# 2. 配置环境变量（必填：ARK_API_KEY、MODEL）
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env
 
+# 3. 后端（依赖由 uv 管理，pyproject.toml 在根目录）
+uv sync
+cd backend
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
-### 2026-04-15 (v0.2.1)
+# 4. 前端（另开终端）
+cd frontend
+npm install && npm run dev
+```
 
-- **日志体系重构**：迁移至 structlog，开发彩色/生产 JSON 双模式，三方库噪音压制
-- **日志配置解耦**：从 `config.py` 拆出独立 `app/utils/log.py`，环境变量控制
-- **MCP网关服务**：添加 Gateway 入口，服务器配置改为独立 JSON 文件，扩展性强
+## 环境变量
 
-### 2026-02（v0.2）
+完整清单见 [backend/.env.example](backend/.env.example)，关键项：
 
-- **RAG 流水线重写**：四阶段检索/评分/重写/扩展，HyDE + StepBack + AutoMerge
-- **Embedding 统一**：统一嵌入接口，小叶级检索 + 自动合并
-- **可观测流式**：SSE 新增 `rag_step` 进度 + `trace` 决策追溯
-
-### 2025-06 / 2025-10（v0.1）
-
-- **MCP 工具集成**：Git / MySQL（只读），`MCP_SERVERS_JSON` 环境变量驱动
-- **Agentic RAG 基础**：FastAPI + Agent + Milvus 搭建
-- **JWT 认证 + 文档管理 + 会话持久化**
-
----
+| 变量 | 必填 | 默认值 | 说明 |
+|---|---|---|---|
+| `ARK_API_KEY` | ✅ | - | LLM API Key |
+| `MODEL` | ✅ | - | 主模型名 |
+| `BASE_URL` | - | 阿里云 dashscope | OpenAI 兼容接口地址 |
+| `EMBEDDER` / `EMBEDDING_DIM` | - | text-embedding-v2 / 1536 | 向量模型与维度 |
+| `JWT_SECRET_KEY` | - | change-this-secret | 生产环境务必修改 |
+| `ADMIN_INVITE_CODE` | - | 空 | 注册邀请码，为空不校验 |
+| `MCP_ENABLED` | - | false | 开启 Git / MySQL 等 MCP 工具 |
 
 ## 评测体系
 
@@ -62,27 +79,17 @@
 | 忠诚度 `faithfulness` | 81% | **91%** | +10% | AutoMerge 合并父块提升上下文完整度 |
 | 答案相关性 `answer_relevancy` | 85% | **93%** | +8% | 多步 Agent 自主推理减少偏题 |
 
+### 运行评测
+
+```bash
+uv run python evals/run_ragas_eval.py   # 结果输出到 evals/experiments/
+```
+
 ### 在线可观测
 
 - **LangSmith** 全链路追踪：每次 Agent 调用自动记录 prompt、检索步骤、工具调用、最终回答
 - **SSE `trace` 事件**：前端实时展示检索元数据，可回溯每次决策
 
----
+## License
 
-## 快速开始
-
-```bash
-# 1. 启动基础服务
-cd backend && docker compose up -d      # MySQL + Redis + Milvus
-
-# 2. 配置环境变量
-cp backend/.env.example backend/.env    # 填 ARK_API_KEY 等必填项
-
-# 3. 后端
-uv sync
-uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-
-# 4. 前端
-cd frontend
-npm install && npm run dev
-```
+本项目基于 [Apache License 2.0](LICENSE) 开源，版本历史见 [CHANGELOG.md](CHANGELOG.md)。
